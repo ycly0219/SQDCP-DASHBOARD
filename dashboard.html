@@ -15,7 +15,7 @@
 @keyframes warnLine{0%,100%{opacity:.22}50%{opacity:1}}                         /* 未达标行警示线 2.5s */
 @keyframes ringPulse{0%{transform:scale(1);opacity:.85}100%{transform:scale(2.8);opacity:0}} /* 日历异常红点扩散环 2s */
 @keyframes radarSpin{from{transform:translate(-50%,-50%) rotate(0deg)}to{transform:translate(-50%,-50%) rotate(360deg)}} /* 雷达扫描光环 14s */
-html,body{height:100vh;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei","Source Han Sans SC","Noto Sans CJK SC",sans-serif}
+html,body{height:100vh;overflow-y:auto;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei","Source Han Sans SC","Noto Sans CJK SC",sans-serif}
 body{display:flex;flex-direction:column;padding:14px;gap:12px;position:relative;background:radial-gradient(1100px 620px at 10% -15%,rgba(56,189,248,.14),transparent 60%),radial-gradient(900px 520px at 95% 8%,rgba(129,140,248,.10),transparent 55%),radial-gradient(1000px 620px at 110% 115%,rgba(236,72,153,.08),transparent 55%),linear-gradient(135deg,#eef5fd 0%,#f4f8fe 48%,#eaf1fb 100%);color:var(--td);-webkit-font-smoothing:antialiased}
 body::before{content:"";position:fixed;top:0;left:0;width:100%;height:100%;background-image:linear-gradient(rgba(37,99,235,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(37,99,235,.05) 1px,transparent 1px);background-size:48px 48px;pointer-events:none;z-index:0;animation:glimmer 8s ease-in-out infinite}
 body>*{position:relative;z-index:1}
@@ -42,7 +42,7 @@ body>*{position:relative;z-index:1}
 .kpi:hover{transform:translateY(-4px);box-shadow:0 20px 40px rgba(30,58,110,.14),0 0 0 1px rgba(56,189,248,.4),0 0 30px rgba(56,189,248,.12);border-color:var(--glass-border-hi)}
 .kpi .v{font-size:34px;font-weight:900;font-variant-numeric:tabular-nums;background:linear-gradient(135deg,#0284c7,#0ea5e9 60%,#6366f1);-webkit-background-clip:text;-webkit-text-fill-color:transparent;line-height:1.1;filter:drop-shadow(0 2px 8px rgba(56,189,248,.35))}
 .kpi .l{font-size:11px;color:var(--tm);margin-top:1px;font-weight:500;letter-spacing:.3px}
-.cats{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;flex:1;min-height:0}
+.cats{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;flex:0 1 auto;min-height:0}
 .cat{background:var(--card);backdrop-filter:blur(18px);color:var(--td);border-radius:var(--radius);overflow:hidden;border:1px solid var(--glass-border);box-shadow:var(--shadow),inset 0 1px 0 rgba(56,189,248,.08);display:flex;flex-direction:column;min-height:0;transition:transform .25s var(--ease),box-shadow .35s var(--ease);animation:fadeUp .55s var(--ease) both;position:relative}
 .cat+.cat{border-left:1px solid rgba(56,189,248,.08)}
 .cat:nth-child(1){animation-delay:.10s}.cat:nth-child(2){animation-delay:.16s}.cat:nth-child(3){animation-delay:.22s}.cat:nth-child(4){animation-delay:.28s}.cat:nth-child(5){animation-delay:.34s}
@@ -55,12 +55,12 @@ body>*{position:relative;z-index:1}
 .cal-head-row{display:none}
 .cal-head{font-size:10px;color:var(--tl);text-align:center;font-weight:600;letter-spacing:.5px}
 /* 字母形状日历：CSS Grid 精确布局，空位零尺寸 */
-.letter-grid{display:inline-grid;gap:2px;align-self:center;justify-self:center;max-width:100%;max-height:100%}
+.letter-grid{--cell:24px;display:inline-grid;gap:2px;align-self:center;justify-self:center;max-width:100%;max-height:100%;margin-bottom:6px;overflow:hidden}
 .letter-row{display:contents}/* 展平到父级 Grid */
-.cal-cell{display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;border-radius:5px;background:rgba(100,116,139,.15);color:#475569;border:1px solid rgba(100,116,139,.25);position:relative;transition:transform .18s var(--ease),border-color .18s var(--ease),box-shadow .18s var(--ease);width:24px;height:24px;flex:0 0 24px;box-sizing:border-box;line-height:1;padding:0}
+.cal-cell{display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;border-radius:5px;background:rgba(100,116,139,.15);color:#475569;border:1px solid rgba(100,116,139,.25);position:relative;transition:transform .18s var(--ease),border-color .18s var(--ease),box-shadow .18s var(--ease);width:var(--cell);height:var(--cell);flex:0 0 var(--cell);box-sizing:border-box;line-height:1;padding:0}
 .cal-cell:hover{transform:scale(1.35);z-index:5;box-shadow:0 4px 12px rgba(30,58,110,.18);border-color:rgba(14,165,233,.6)}
 /* 空位完全折叠，不占任何空间 */
-.cal-cell.empty{width:24px;height:24px;padding:0;margin:0;border:none;background:transparent;flex:0 0 24px;visibility:hidden;pointer-events:none}
+.cal-cell.empty{width:var(--cell);height:var(--cell);padding:0;margin:0;border:none;background:transparent;flex:0 0 var(--cell);visibility:hidden;pointer-events:none}
 .cal-cell.g{background:rgba(52,211,153,.22);color:var(--td);border-color:rgba(52,211,153,.6)}
 .cal-cell.g::after{content:"";position:absolute;top:3px;right:3px;width:6px;height:6px;border-radius:50%;background:#34d399;box-shadow:0 0 6px rgba(52,211,153,.8);animation:dotPulse 2s ease-in-out infinite}
 .cal-cell.r{background:rgba(244,63,94,.18);color:#e11d48;border-color:rgba(244,63,94,.65)}
@@ -300,7 +300,7 @@ body>*{position:relative;z-index:1}
       var rz;
       window.addEventListener("resize", function () {
         clearTimeout(rz);
-        rz = setTimeout(function () { renderPieAndFail(); }, 150);
+        rz = setTimeout(function () { renderPieAndFail(); fitLetterGrids(); }, 150);
       });
       // ▶ 方案B 轮询：页面加载立即触发首次实时查询，随后每 4 小时自动重复
       loadData();
@@ -701,10 +701,9 @@ body>*{position:relative;z-index:1}
         var mask = buildLetterMask(baseMask, dim);
         var rows = mask.length, cols = mask[0].length;
         // 保持字母整体高度基本恒定：格子随缩放比例反向增减尺寸，天数越少格子越大
-        var cellPx = Math.max(14, Math.min(28, Math.round(baseMask.length * 24 / rows)));
-        var fontPx = Math.max(9, Math.min(13, Math.round(cellPx * 0.46)));
-        var cellStyle = 'width:' + cellPx + 'px;height:' + cellPx + 'px;flex:0 0 ' + cellPx + 'px;font-size:' + fontPx + 'px';
-        h += '<div class="cal"><div class="letter-grid" style="grid-template-columns:repeat(' + cols + ',' + cellPx + 'px)">';
+        var cellPx = Math.max(8, Math.min(20, Math.round(baseMask.length * 24 / rows)));
+        var fontPx = Math.max(7, Math.min(13, Math.round(cellPx * 0.46)));
+        h += '<div class="cal"><div class="letter-grid" data-rows="' + rows + '" data-cols="' + cols + '" style="--cell:' + cellPx + 'px;grid-template-columns:repeat(' + cols + ',' + cellPx + 'px)">';
 
         // 顺时针渲染：先计算顺时针路径，再建立位置-日期映射（此时格子数已等于 dim）
         var clockOrder = getClockwiseOrder(mask);
@@ -723,10 +722,10 @@ body>*{position:relative;z-index:1}
               var ds = Y + "-" + pad2(M) + "-" + pad2(dayNum);
               var dr = DATA.daily.filter(function (r) { return r.date === ds; });
               var st = dr.length ? catDayStatus(c.cat, ds) : "n";
-              h += '<div class="cal-cell ' + st + '" style="' + cellStyle + '" data-cat="' + c.cat + '" data-date="' + ds + '" data-day="' + dayNum + '">' + dayNum + '</div>';
+              h += '<div class="cal-cell ' + st + '" style="font-size:' + fontPx + 'px" data-cat="' + c.cat + '" data-date="' + ds + '" data-day="' + dayNum + '">' + dayNum + '</div>';
             } else {
               // 掩码为0（字母外空位）：折叠占位、不可见、不显示任何边框
-              h += '<div class="cal-cell empty" style="' + cellStyle + '"></div>';
+              h += '<div class="cal-cell empty"></div>';
             }
           }
         }
@@ -751,9 +750,29 @@ body>*{position:relative;z-index:1}
         document.getElementById("pct_" + c.cat).textContent = t > 0 ? pct + "%" : "—";
       });
       // 底部拼接指标文本自适应：根据可用宽度整体缩放，保证单行完整显示不换行
+      fitLetterGrids();
       fitMnText();
       // 日历格子渲染完成后，给每个有效格子绑定悬浮事件
       bindCellHover();
+    }
+    // 根据实际可用空间收缩字母日历格子，避免 P 等长字形在窄/矮卡片里超出边框
+    function fitLetterGrids() {
+      document.querySelectorAll("#cats .letter-grid").forEach(function (grid) {
+        var rows = parseInt(grid.getAttribute("data-rows"), 10) || 0;
+        var cols = parseInt(grid.getAttribute("data-cols"), 10) || 0;
+        var cal = grid.closest(".cal");
+        if (!rows || !cols || !cal) return;
+        var availW = Math.max(0, cal.clientWidth - 24);
+        var availH = Math.max(0, cal.clientHeight - 20 - 6);
+        var gap = 2;
+        var cell = Math.floor(Math.min(
+          (availW - (cols - 1) * gap) / cols,
+          (availH - (rows - 1) * gap) / rows
+        ));
+        cell = Math.max(6, Math.min(20, cell));
+        grid.style.setProperty("--cell", cell + "px");
+        grid.style.gridTemplateColumns = "repeat(" + cols + "," + cell + "px)";
+      });
     }
     // 让底部拼接指标文本（如"日常加班 / 节假日加班 / 盘点准确率 / 实物库存准确率"）自适应容器宽度：
     // 先复原缩放测量真实宽度，超出可用宽度时按比例等比缩小，左对齐充满一行，避免换行
