@@ -10,10 +10,8 @@
 @keyframes fadeUp{from{opacity:0;translate:0 18px}to{opacity:1;translate:0 0}}
 @keyframes pulseGlow{0%,100%{box-shadow:0 4px 14px rgba(91,110,245,.4)}50%{box-shadow:0 6px 26px rgba(91,110,245,.72)}}
 @keyframes glimmer{0%,100%{opacity:.3}50%{opacity:.7}}
-@keyframes dotPulse{0%,100%{opacity:.6;transform:scale(1)}50%{opacity:1;transform:scale(1.2)}}
 /* 常驻动效：仅使用 opacity / transform，配合 will-change 实现 GPU 加速、无重排 */
 @keyframes warnLine{0%,100%{opacity:.22}50%{opacity:1}}                         /* 未达标行警示线 2.5s */
-@keyframes ringPulse{0%{transform:scale(1);opacity:.85}100%{transform:scale(2.8);opacity:0}} /* 日历异常红点扩散环 2s */
 @keyframes radarSpin{from{transform:translate(-50%,-50%) rotate(0deg)}to{transform:translate(-50%,-50%) rotate(360deg)}} /* 雷达扫描光环 14s */
 html,body{height:100vh;overflow-y:auto;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei","Source Han Sans SC","Noto Sans CJK SC",sans-serif}
 body{display:flex;flex-direction:column;padding:14px;gap:12px;position:relative;background:radial-gradient(1100px 620px at 10% -15%,rgba(56,189,248,.14),transparent 60%),radial-gradient(900px 520px at 95% 8%,rgba(129,140,248,.10),transparent 55%),radial-gradient(1000px 620px at 110% 115%,rgba(236,72,153,.08),transparent 55%),linear-gradient(135deg,#eef5fd 0%,#f4f8fe 48%,#eaf1fb 100%);color:var(--td);-webkit-font-smoothing:antialiased}
@@ -43,9 +41,8 @@ body>*{position:relative;z-index:1}
 .kpi .v{font-size:34px;font-weight:900;font-variant-numeric:tabular-nums;background:linear-gradient(135deg,#0284c7,#0ea5e9 60%,#6366f1);-webkit-background-clip:text;-webkit-text-fill-color:transparent;line-height:1.1;filter:drop-shadow(0 2px 8px rgba(56,189,248,.35))}
 .kpi .l{font-size:11px;color:var(--tm);margin-top:1px;font-weight:500;letter-spacing:.3px}
 .cats{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;flex:0 1 auto;min-height:0}
-.cat{background:var(--card);backdrop-filter:blur(18px);color:var(--td);border-radius:var(--radius);overflow:hidden;border:1px solid var(--glass-border);box-shadow:var(--shadow),inset 0 1px 0 rgba(56,189,248,.08);display:flex;flex-direction:column;min-height:0;transition:transform .25s var(--ease),box-shadow .35s var(--ease);animation:fadeUp .55s var(--ease) both;position:relative}
+.cat{background:var(--card);backdrop-filter:blur(18px);color:var(--td);border-radius:var(--radius);overflow:hidden;border:1px solid var(--glass-border);box-shadow:var(--shadow),inset 0 1px 0 rgba(56,189,248,.08);display:flex;flex-direction:column;min-height:0;transition:transform .25s var(--ease),box-shadow .35s var(--ease);position:relative}
 .cat+.cat{border-left:1px solid rgba(56,189,248,.08)}
-.cat:nth-child(1){animation-delay:.10s}.cat:nth-child(2){animation-delay:.16s}.cat:nth-child(3){animation-delay:.22s}.cat:nth-child(4){animation-delay:.28s}.cat:nth-child(5){animation-delay:.34s}
 .cat:hover{transform:translateY(-3px);box-shadow:var(--shadow),0 0 0 1px var(--glass-border-hi),0 0 30px rgba(56,189,248,.1)}
 .cat-hdr{display:flex;align-items:center;gap:8px;padding:9px 12px;color:#fff;font-weight:700;flex:0 0 auto;position:relative}
 .cat-hdr .lt{font-size:20px;font-style:italic;font-weight:900;opacity:.95;width:20px;text-shadow:0 1px 3px rgba(0,0,0,.3)}
@@ -62,10 +59,7 @@ body>*{position:relative;z-index:1}
 /* 空位完全折叠，不占任何空间 */
 .cal-cell.empty{width:var(--cell);height:var(--cell);padding:0;margin:0;border:none;background:transparent;flex:0 0 var(--cell);visibility:hidden;pointer-events:none}
 .cal-cell.g{background:rgba(52,211,153,.22);color:var(--td);border-color:rgba(52,211,153,.6)}
-.cal-cell.g::after{content:"";position:absolute;top:3px;right:3px;width:6px;height:6px;border-radius:50%;background:#34d399;box-shadow:0 0 6px rgba(52,211,153,.8);animation:dotPulse 2s ease-in-out infinite}
 .cal-cell.r{background:rgba(244,63,94,.18);color:#e11d48;border-color:rgba(244,63,94,.65)}
-.cal-cell.r::after{content:"";position:absolute;top:3px;right:3px;width:6px;height:6px;border-radius:50%;background:#fb7185;box-shadow:0 0 6px rgba(251,113,133,.85);animation:dotPulse 2s ease-in-out infinite}
-.cal-cell.r::before{content:"";position:absolute;top:3px;right:3px;width:6px;height:6px;border-radius:50%;border:1px solid rgba(251,113,133,.85);opacity:.85;animation:ringPulse 2s ease-in-out infinite;will-change:transform,opacity}
 .cal-cell.n{background:rgba(148,163,184,.12);color:var(--tl);border-color:rgba(148,163,184,.2)}
 /* 已弃用占位格子：改为按当月天数把字母自适应缩放到恰好 dim 个格子，不再使用空白/虚线占位 */
 .ci{display:none}
