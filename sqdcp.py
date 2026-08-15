@@ -1,0 +1,255 @@
+#!/usr/bin/env python3
+"""SQDCP 单一入口：从飞书多维表格拉数据，生成看板 HTML，或启动本地服务。"""
+import argparse
+import datetime
+import json
+import os
+import sys
+import time
+from http.server import BaseHTTPRequestHandler, HTTPServer
+
+import requests
+
+APP_ID = os.environ.get("FEISHU_APP_ID", "cli_aadc4c86b6791cee")
+APP_SECRET = os.environ.get("FEISHU_APP_SECRET", "g98NQlSXeF6iTuCOb9JACgQQnjGiFGnI")
+APP_TOKEN = "SokabZYA1a4cnMsmahzcD5UKnqe"
+BASE = "https://open.feishu.cn/open-apis"
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+OUT = os.path.join(BASE_DIR, "dashboard.html")
+TEMPLATE = os.path.join(BASE_DIR, "sqdcp.html")
+
+PORT = 7700
+CACHE_TTL = 300  # 接口结果缓存 5 分钟，避免前端刷新/重开时频繁打飞书 API
+_cache = {"data": None, "ts": 0}
+
+HTML_TEMPLATE = open(TEMPLATE, encoding="utf-8").read()
+
+
+def get_token():
+    r = requests.post(f"{BASE}/auth/v3/tenant_access_token/internal",
+                      json={"app_id": APP_ID, "app_secret": APP_SECRET})
+    d = r.json()
+    if d.get("code") != 0:
+        raise RuntimeError(f"get_token failed: {d}")
+    return d["tenant_access_token"]
+
+
+def auth(tk):
+    return {"Authorization": f"Bearer {tk}", "Content-Type": "application/json"}
+
+
+def list_tables(tk):
+    r = requests.get(f"{BASE}/bitable/v1/apps/{APP_TOKEN}/tables", headers=auth(tk))
+    d = r.json()
+    if d.get("code") != 0:
+        raise RuntimeError(f"list_tables failed: {d}")
+    return {it["name"]: it["table_id"] for it in d["data"]["items"]}
+
+
+def list_all_records(tk, tid):
+    out = []
+    page_token = None
+    while True:
+        params = {"page_size": 500}
+        if page_token:
+            params["page_token"] = page_token
+        r = requests.get(f"{BASE}/bitable/v1/apps/{APP_TOKEN}/tables/{tid}/records",
+                         headers=auth(tk), params=params)
+        d = r.json()
+        if d.get("code") != 0:
+            raise RuntimeError(f"list_records failed: {d}")
+        out.extend(d["data"].get("items", []))
+        if not d["data"].get("has_more"):
+            break
+        page_token = d["data"].get("page_token")
+    return out
+
+
+def get_text(v):
+    if v is None:
+        return None
+    if isinstance(v, list):
+        for x in v:
+            if isinstance(x, dict) and x.get("text"):
+                return x["text"]
+            if isinstance(x, str):
+                return x
+        return None
+    if isinstance(v, dict):
+        return v.get("text") or v.get("name")
+    return v
+
+
+def get_link_id(v):
+    if isinstance(v, list) and v:
+        first = v[0]
+        if isinstance(first, dict):
+            ids = first.get("record_ids") or [first.get("record_id")]
+            return ids[0] if ids else None
+        return first
+    if isinstance(v, dict):
+        ids = v.get("record_ids") or [v.get("record_id")]
+        return ids[0] if ids else None
+    return v
+
+
+def fetch_data(year=None):
+    """从飞书多维表格拉取指标配置与每日数据。
+
+    year: 仅保留该年份的数据；为 None 时返回全部。
+    返回 {metrics:[...], daily:[...], months:[...]}，供前端/接口复用。
+    """
+    print("[1] get token ...", file=sys.stderr)
+    token = get_token()
+    tables = list_tables(token)
+    tid_metric = tables["指标配置表"]
+    tid_daily = tables["每日数据表"]
+
+    print("[2] read metric config ...", file=sys.stderr)
+    mrecs = list_all_records(token, tid_metric)
+    rid2metric = {}
+    metrics = []
+    for r in mrecs:
+        f = r["fields"]
+        code = f.get("指标编号")
+        if not code:
+            continue
+        m = {"code": code, "name": get_text(f.get("指标名称")) or code,
+             "category": get_text(f.get("SQDCP分类")) or "Other",
+             "target": f.get("目标值"),
+             "targetDir": get_text(f.get("目标方向")) or "",
+             "unit": get_text(f.get("单位")) or ""}
+        rid2metric[r["record_id"]] = m
+        metrics.append(m)
+
+    print("[3] read daily ...", file=sys.stderr)
+    drecs = list_all_records(token, tid_daily)
+    daily = []
+    months = set()
+    for r in drecs:
+        f = r["fields"]
+        rid = get_link_id(f.get("指标"))
+        m = rid2metric.get(rid)
+        if not m:
+            continue
+        date_ms = f.get("日期")
+        if not isinstance(date_ms, (int, float)):
+            continue
+        dt = datetime.datetime.fromtimestamp(date_ms / 1000, datetime.timezone.utc).date()
+        if year is not None and dt.year != year:
+            continue
+        val = f.get("数值")
+        if isinstance(val, str):
+            try:
+                val = float(val)
+            except Exception:
+                val = None
+        daily.append({"date": dt.strftime("%Y-%m-%d"), "year": dt.year,
+                      "month": dt.month, "day": dt.day, "code": m["code"],
+                      "dim": get_text(f.get("维度")) or "", "value": val})
+        months.add(f"{dt.year}-{dt.month:02d}")
+
+    return {"metrics": metrics, "daily": daily, "months": sorted(months)}
+
+
+def build_html(data):
+    """把最新数据注入 sqdcp.html 模板，返回可写盘的完整 HTML。"""
+    data_json = json.dumps(data, ensure_ascii=False, default=str)
+    # 避免 JSON 里出现 </script>，破坏内嵌数据脚本
+    data_json = data_json.replace("</", "<\\/")
+    placeholder = ">__SQDCP_DATA__</script>"
+    if placeholder not in HTML_TEMPLATE:
+        raise RuntimeError("sqdcp.html 缺少 __SQDCP_DATA__ 注入点")
+    return HTML_TEMPLATE.replace(placeholder, ">" + data_json + "</script>")
+
+
+def get_data():
+    now = time.time()
+    if _cache["data"] is not None and now - _cache["ts"] < CACHE_TTL:
+        return _cache["data"]
+    # 只取"当前年份"的数据（与本地服务原始行为一致）
+    data = fetch_data(year=datetime.date.today().year)
+    _cache["data"] = data
+    _cache["ts"] = now
+    return data
+
+
+class Handler(BaseHTTPRequestHandler):
+    def _send(self, code, body, ctype="application/json; charset=utf-8"):
+        if isinstance(body, str):
+            body = body.encode("utf-8")
+        self.send_response(code)
+        self.send_header("Content-Type", ctype)
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Cache-Control", "no-store")
+        self.end_headers()
+        self.wfile.write(body)
+
+    def do_GET(self):
+        if self.path in ("/", "/index.html"):
+            try:
+                with open(TEMPLATE, "r", encoding="utf-8") as f:
+                    self._send(200, f.read(), "text/html; charset=utf-8")
+            except Exception as e:
+                self._send(500, json.dumps({"error": str(e)}, ensure_ascii=False))
+            return
+        if self.path.startswith("/api/data"):
+            try:
+                self._send(200, json.dumps(get_data(), ensure_ascii=False, default=str))
+            except Exception as e:
+                self._send(502, json.dumps({"error": str(e)}, ensure_ascii=False))
+            return
+        self._send(404, json.dumps({"error": "not found"}))
+
+    def log_message(self, *a):
+        pass
+
+
+def cmd_build(year):
+    data = fetch_data(year)
+    html = build_html(data)
+    with open(OUT, "w", encoding="utf-8") as f:
+        f.write(html)
+    print(f"[4] dashboard.html -> {OUT}")
+
+
+def cmd_data(year):
+    data = fetch_data(year)
+    sys.stdout.write(json.dumps(data, ensure_ascii=False, default=str) + "\n")
+
+
+def cmd_serve():
+    print(f"SQDCP dashboard server  ->  http://localhost:{PORT}")
+    print("前端打开 http://localhost:7700/ 即可（同源，轮询无 CORS 问题）")
+    HTTPServer(("0.0.0.0", PORT), Handler).serve_forever()
+
+
+def parse_args(argv=None):
+    parser = argparse.ArgumentParser(
+        prog="sqdcp.py",
+        description="SQDCP 看板：拉取飞书数据、生成 HTML、启动本地服务。",
+    )
+    sub = parser.add_subparsers(dest="command")
+    sub.add_parser("serve", help="启动本地服务（默认命令，端口 7700）")
+    build = sub.add_parser("build", help="从飞书拉取数据并生成 dashboard.html")
+    build.add_argument("year", nargs="?", type=int,
+                       help="仅保留该年份；省略则包含全部年份")
+    data = sub.add_parser("data", help="从飞书拉取数据并输出 JSON")
+    data.add_argument("year", nargs="?", type=int,
+                      help="仅保留该年份；省略则包含全部年份")
+    return parser.parse_args(argv)
+
+
+def main(argv=None):
+    args = parse_args(argv)
+    year = getattr(args, "year", None)
+    if args.command == "build":
+        cmd_build(year)
+    elif args.command == "data":
+        cmd_data(year)
+    else:
+        cmd_serve()
+
+
+if __name__ == "__main__":
+    main()
