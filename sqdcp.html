@@ -618,6 +618,82 @@ body>*{position:relative;z-index:1}
       return cells;
     }
 
+    // 计算字母 S 的连续轮廓顺序：
+    // 顶杠右→左 → 左上竖线下行 → 中杠左→右 → 右下弯下行 → 底杠右→左 → 左下竖线上行
+    function getSShapeOrder(mask) {
+      var R = mask.length, C = mask[0].length;
+      // 找中杠所在行：1..R-2 范围内亮格最多的行
+      var midRow = 0, midCount = -1;
+      for (var r = 1; r <= R - 2; r++) {
+        var n = 0;
+        for (var c = 0; c < C; c++) if (mask[r][c] === 1) n++;
+        if (n > midCount) { midCount = n; midRow = r; }
+      }
+      if (midRow <= 0) return getClockwiseOrder(mask);
+
+      var used = {};
+      var order = [];
+      function addCell(r, c) {
+        if (r < 0 || r >= R || c < 0 || c >= C || mask[r][c] !== 1) return;
+        var key = r + '_' + c;
+        if (used[key]) return;
+        used[key] = true;
+        order.push([r, c]);
+      }
+
+      // 顶杠：右到左
+      for (var c = C - 1; c >= 0; c--) addCell(0, c);
+      // 左上竖线：从上到下
+      for (var r = 1; r <= midRow - 1; r++) { addCell(r, 0); addCell(r, 1); }
+      // 中杠：左到右
+      for (var c = 0; c < C; c++) addCell(midRow, c);
+      // 右下弯与右侧竖线：从上到下
+      for (var r = midRow + 1; r <= R - 2; r++) { addCell(r, C - 2); addCell(r, C - 1); }
+      // 底杠：右到左
+      for (var c = C - 1; c >= 0; c--) addCell(R - 1, c);
+      // 左下竖线：从下到上
+      for (var r = R - 2; r >= midRow + 1; r--) { addCell(r, 0); addCell(r, 1); }
+      // 兜底：确保顺序覆盖全部有效格子
+      for (var r = 0; r < R; r++) for (var c = 0; c < C; c++) addCell(r, c);
+      return order;
+    }
+
+    // 计算字母 C 的连续轮廓顺序：
+    // 右上竖线从下到上 → 顶杠右到左 → 左侧曲线从上到下 → 底杠左到右 → 右下竖线从下到上
+    function getCShapeOrder(mask) {
+      var R = mask.length, C = mask[0].length;
+      // 找右侧开口所在行：1..R-2 范围内最右列第一次为空的行
+      var gapRow = -1;
+      for (var r = 1; r <= R - 2; r++) {
+        if (mask[r][C - 1] !== 1) { gapRow = r; break; }
+      }
+      if (gapRow <= 0) return getClockwiseOrder(mask);
+
+      var used = {};
+      var order = [];
+      function addCell(r, c) {
+        if (r < 0 || r >= R || c < 0 || c >= C || mask[r][c] !== 1) return;
+        var key = r + '_' + c;
+        if (used[key]) return;
+        used[key] = true;
+        order.push([r, c]);
+      }
+
+      // 右上竖线：从下到上，再进入顶杠右上角
+      for (var r = gapRow - 1; r >= 1; r--) addCell(r, C - 1);
+      // 顶杠：右到左
+      for (var c = C - 1; c >= 0; c--) addCell(0, c);
+      // 左侧曲线与竖线：从上到下
+      for (var r = 1; r <= R - 2; r++) { addCell(r, 0); addCell(r, 1); }
+      // 底杠：左到右
+      for (var c = 0; c < C; c++) addCell(R - 1, c);
+      // 右下竖线：从下到上
+      for (var r = R - 2; r >= gapRow + 1; r--) addCell(r, C - 1);
+      // 兜底：确保顺序覆盖全部有效格子
+      for (var r = 0; r < R; r++) for (var c = 0; c < C; c++) addCell(r, c);
+      return order;
+    }
+
     // 根据当月天数 dim 生成“恰好 dim 个格子”的字母掩码：
     // 当字母原始格子数多于当月天数时，用 OR 降采样把字母整体缩小到接近 dim 个格子，
     // 再按顺时针顺序裁掉尾部多余格子，使亮格数恰好等于 dim——
@@ -677,7 +753,7 @@ body>*{position:relative;z-index:1}
     }
 
     // 渲染中部 5 个类别：字母形状日历，日期数字按 S/Q/D/C/P 字母轮廓排列填充
-    // 渲染顺序：顺时针路径填入日期(1,2,3...)，字母按当月天数自适应缩放到恰好 dim 个格子（无占位）
+    // 渲染顺序：S/C 按连续轮廓路径，其余字母按顺时针路径填入日期(1,2,3...)，字母按当月天数自适应缩放到恰好 dim 个格子（无占位）
     function renderCats() {
       var box = document.getElementById("cats"); box.innerHTML = "";
       var ym = curMonth();
@@ -699,15 +775,15 @@ body>*{position:relative;z-index:1}
         var fontPx = Math.max(7, Math.min(13, Math.round(cellPx * 0.46)));
         h += '<div class="cal"><div class="letter-grid" data-rows="' + rows + '" data-cols="' + cols + '" style="--cell:' + cellPx + 'px;grid-template-columns:repeat(' + cols + ',' + cellPx + 'px)">';
 
-        // 顺时针渲染：先计算顺时针路径，再建立位置-日期映射（此时格子数已等于 dim）
-        var clockOrder = getClockwiseOrder(mask);
+        // 渲染路径：S/C 按连续轮廓顺序，其余字母保持顺时针路径
+        var viewOrder = c.letter === 'S' ? getSShapeOrder(mask) : (c.letter === 'C' ? getCShapeOrder(mask) : getClockwiseOrder(mask));
         // 建立位置到日期的映射 posMap[key] = dayIdx
         var posMap = {};
-        for (var i = 0; i < clockOrder.length && i < dim; i++) {
-          var key = clockOrder[i][0] + '_' + clockOrder[i][1];
+        for (var i = 0; i < viewOrder.length && i < dim; i++) {
+          var key = viewOrder[i][0] + '_' + viewOrder[i][1];
           posMap[key] = i + 1; // 日期从1开始
         }
-        // 按Grid行列顺序渲染DOM（保持CSS Grid布局正确），日期按顺时针分配
+        // 按Grid行列顺序渲染DOM（保持CSS Grid布局正确），日期按笔画/顺时针路径分配
         for (var ri = 0; ri < mask.length; ri++) {
           for (var ci = 0; ci < mask[ri].length; ci++) {
             if (mask[ri][ci] === 1 && posMap[ri + '_' + ci]) {
