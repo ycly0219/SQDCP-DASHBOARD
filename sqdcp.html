@@ -54,7 +54,7 @@ body>*{position:relative;z-index:1}
 /* 字母形状日历：CSS Grid 精确布局，空位零尺寸 */
 .letter-grid{--cell:24px;display:inline-grid;gap:2px;align-self:center;justify-self:center;max-width:100%;max-height:100%;margin-bottom:6px;overflow:hidden}
 .letter-row{display:contents}/* 展平到父级 Grid */
-.cal-cell{display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;border-radius:5px;background:rgba(100,116,139,.15);color:#475569;border:1px solid rgba(100,116,139,.25);position:relative;transition:transform .18s var(--ease),border-color .18s var(--ease),box-shadow .18s var(--ease);width:var(--cell);height:var(--cell);flex:0 0 var(--cell);box-sizing:border-box;line-height:1;padding:0}
+.cal-cell{display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;border-radius:3px;background:rgba(100,116,139,.15);color:#475569;border:1px solid rgba(100,116,139,.25);position:relative;transition:transform .18s var(--ease),border-color .18s var(--ease),box-shadow .18s var(--ease);width:var(--cell);height:var(--cell);flex:0 0 var(--cell);box-sizing:border-box;line-height:1;padding:0}
 .cal-cell:hover{transform:scale(1.35);z-index:5;box-shadow:0 4px 12px rgba(30,58,110,.18);border-color:rgba(14,165,233,.6)}
 /* 空位完全折叠，不占任何空间 */
 .cal-cell.empty{width:var(--cell);height:var(--cell);padding:0;margin:0;border:none;background:transparent;flex:0 0 var(--cell);visibility:hidden;pointer-events:none}
@@ -773,7 +773,6 @@ body>*{position:relative;z-index:1}
         var grid = (LETTER_DAY_MASKS[c.letter] && LETTER_DAY_MASKS[c.letter][dim]) || LETTER_DAY_MASKS['S'][28];
         var rows = grid.length, cols = grid[0].length;
         var cellPx = 16;
-        var fontPx = Math.max(7, Math.min(13, Math.round(cellPx * 0.46)));
         h += '<div class="cal"><div class="letter-grid" data-rows="' + rows + '" data-cols="' + cols + '" style="--cell:' + cellPx + 'px;grid-template-columns:repeat(' + cols + ',' + cellPx + 'px)">';
         // 按掩码行列原样渲染：>0 为该格日期，0 为字母外空位
         for (var ri = 0; ri < rows; ri++) {
@@ -783,7 +782,7 @@ body>*{position:relative;z-index:1}
               var ds = Y + "-" + pad2(M) + "-" + pad2(dayNum);
               var dr = DATA.daily.filter(function (r) { return r.date === ds; });
               var st = dr.length ? catDayStatus(c.cat, ds) : "n";
-              h += '<div class="cal-cell ' + st + '" style="font-size:' + fontPx + 'px" data-cat="' + c.cat + '" data-date="' + ds + '" data-day="' + dayNum + '">' + dayNum + '</div>';
+              h += '<div class="cal-cell ' + st + '" data-cat="' + c.cat + '" data-date="' + ds + '" data-day="' + dayNum + '">' + dayNum + '</div>';
             } else {
               h += '<div class="cal-cell empty"></div>';
             }
