@@ -54,14 +54,16 @@ body>*{position:relative;z-index:1}
 .cal-cell.r{background:rgba(244,63,94,.18);color:#e11d48;border-color:rgba(244,63,94,.65)}
 .cal-cell.n{background:rgba(148,163,184,.12);color:var(--tl);border-color:rgba(148,163,184,.2)}
 /* 已弃用占位格子：改为按当月天数把字母自适应缩放到恰好 dim 个格子，不再使用空白/虚线占位 */
-.ci{display:none}
+.ci{display:block;background:color-mix(in srgb,var(--catc) 5%,transparent)}
 .ci .mn{color:var(--accent);font-weight:800;font-size:13px;margin-bottom:4px;white-space:nowrap;overflow:hidden}
 .ci .mn .mn-txt{display:inline-block;white-space:nowrap;transform-origin:left center}
-.ci .row{display:flex;justify-content:space-between;align-items:center;gap:8px}
-.ci .owner{color:var(--tm);font-size:11px;background:rgba(56,189,248,.1);border:1px solid rgba(56,189,248,.2);padding:1px 8px;border-radius:999px;white-space:nowrap}
+.ci .row{display:flex;justify-content:center;align-items:flex-end;gap:8px;padding:0 13px;position:relative}
+.ci .row .st-ph{flex:1}
+.ci .row .st{color:var(--tm);font-size:11px;white-space:nowrap;transform-origin:right center}
+.ci .owner{color:var(--tm);font-size:13px;font-weight:700;background:color-mix(in srgb,var(--catc) 5%,transparent);border:none;padding:1px 8px;border-radius:999px;white-space:nowrap}
 .ci .owner .lb{color:var(--tl);margin-right:3px}
 
-.ci .alert{font-size:10px;margin-top:3px;padding:1px 0}.ci .alert.g{color:var(--good)}.ci .alert.r{color:var(--bad)}.ci .alert.n{color:var(--tl)}.ci .st{color:var(--tm)}
+.ci .alert{font-size:10px;margin-top:3px;padding:1px 0}.ci .alert.g{color:var(--good)}.ci .alert.r{color:var(--bad)}.ci .alert.n{color:var(--tl)}
 .row2{display:grid;grid-template-columns:1.4fr 1.35fr .8fr;gap:10px;flex:1;min-height:0}
 .panel{background:var(--card);backdrop-filter:blur(18px);color:var(--td);padding:13px 16px;border-radius:var(--radius);border:1px solid var(--glass-border);box-shadow:var(--shadow),inset 0 1px 0 rgba(56,189,248,.08);display:flex;flex-direction:column;min-height:0;animation:fadeUp .6s var(--ease) both;position:relative}
 .panel:nth-child(1){animation-delay:.30s}.panel:nth-child(2){animation-delay:.36s}.panel:nth-child(3){animation-delay:.42s}
@@ -211,11 +213,11 @@ body>*{position:relative;z-index:1}
     //  bothTarget : 交付类，D01出库准时率 与 D03入库准时率 都达标才绿，否则红
     //  allTarget  : 成本/人员类，所有带目标的指标当日都达标才绿，否则红
     const CATS = [
-      { cat: "Safety", letter: "S", cn: "安全", color: "#5b6ef5", rule: "anyNonZero", owner: "张晓梅" },
-      { cat: "Quality", letter: "Q", cn: "质量", color: "#22c55e", rule: "anyNonZero", owner: "李玉峰" },
-      { cat: "Delivery", letter: "D", cn: "交付", color: "#06b6d4", rule: "bothTarget", owner: "高莉杰" },
-      { cat: "Cost", letter: "C", cn: "成本", color: "#f59e0b", rule: "allTarget", owner: "潘夜梦" },
-      { cat: "People", letter: "P", cn: "人员", color: "#ec4899", rule: "allTarget", owner: "何勇" }
+      { cat: "Safety", letter: "S", cn: "安全", color: "#5b6ef5", rule: "anyNonZero", owner: "张志伟" },
+      { cat: "Quality", letter: "Q", cn: "质量", color: "#22c55e", rule: "anyNonZero", owner: "张志伟" },
+      { cat: "Delivery", letter: "D", cn: "交付", color: "#06b6d4", rule: "bothTarget", owner: "张志伟" },
+      { cat: "Cost", letter: "C", cn: "成本", color: "#f59e0b", rule: "allTarget", owner: "张志伟" },
+      { cat: "People", letter: "P", cn: "人员", color: "#ec4899", rule: "allTarget", owner: "张志伟" }
     ];
     // 根据指标目标方向(越低越好/越高越好/不低于阈值)与实测值 v，返回红绿灯状态
     //   "g" 绿(达标) / "r" 红(未达标) / "n" 灰(无目标)
@@ -747,7 +749,7 @@ body>*{position:relative;z-index:1}
         var alertCls = "g"; var alertTxt = "\u5168\u90e8\u8fbe\u6807 \u2713";
         if (badDays > 0) { alertCls = "r"; alertTxt = "\u26a0 " + badDays + "\u5929\u5f02\u5e38"; }
         else if (t === 0) { alertCls = "n"; alertTxt = "\u6682\u65e0\u6570\u636e"; }
-        h += '<div class="ci"><div class="mn"><span class="mn-txt">' + (tg.map(function (m) { return m.name; }).join(" / ") || "—") + '</span></div><div class="row"><div class="st">\u672c\u6708\u8fbe\u6807 ' + g + "/" + t + " (" + pct + '%)</div><div class="owner"><span class="lb">\u8d23\u4efb\u4eba:</span>' + (c.owner || "—") + '</div></div><div class="alert ' + alertCls + '">' + alertTxt + '</div></div></div>';
+        h += '<div class="ci"><div class="row"><div class="st-ph"></div><div class="owner"><span class="lb">\u8d23\u4efb\u4eba:</span>' + (c.owner || "—") + '</div><div class="st">\u672c\u6708\u8fbe\u6807 ' + g + "/" + t + '</div></div></div>';
         box.innerHTML += h;
         // 把达标率回填到标题栏右上角
         document.getElementById("pct_" + c.cat).textContent = t > 0 ? pct + "%" : "—";
@@ -755,6 +757,7 @@ body>*{position:relative;z-index:1}
       // 底部拼接指标文本自适应：根据可用宽度整体缩放，保证单行完整显示不换行
       fitLetterGrids();
       fitMnText();
+      fitStText();
     }
     // 根据实际可用空间收缩字母日历格子，避免 P 等长字形在窄/矮卡片里超出边框
     function fitLetterGrids() {
@@ -786,6 +789,20 @@ body>*{position:relative;z-index:1}
         var need = span.scrollWidth;
         if (avail > 0 && need > avail) {
           span.style.transform = "scale(" + (avail / need) + ")";
+        }
+      });
+    }
+    // 本月达标文本超出容器时向右锚等比缩小，避免换行/溢出边框
+    function fitStText() {
+      document.querySelectorAll(".ci .row .st").forEach(function (st) {
+        st.style.transform = "none";
+        var parent = st.parentElement;
+        var owner = parent.querySelector(".owner");
+        var avail = parent.clientWidth - 26 - 8; // padding*2 + gap
+        if (owner) avail -= owner.offsetWidth;
+        var need = st.scrollWidth;
+        if (avail > 0 && need > avail) {
+          st.style.transform = "scale(" + (avail / need) + ")";
         }
       });
     }
