@@ -31,7 +31,6 @@ body>*{position:relative;z-index:1}
 .hdr select{padding:5px 12px;border:1px solid rgba(56,189,248,.25);border-radius:8px;background:rgba(255,255,255,.7);color:var(--td);font-size:13px;cursor:pointer;transition:border-color .15s}
 .hdr select:hover{border-color:rgba(56,189,248,.7);background:rgba(56,189,248,.12)}
 .hdr select option{color:var(--td);background:#fff}
-.hdr .rate{background:linear-gradient(135deg,rgba(56,189,248,.25),rgba(129,140,248,.25));color:#0369a1;padding:6px 16px;border-radius:999px;font-weight:700;font-size:13px;border:1px solid rgba(56,189,248,.35);box-shadow:0 4px 14px rgba(56,189,248,.2),0 0 30px rgba(56,189,248,.08);white-space:nowrap;animation:pulseGlow 3.4s ease-in-out infinite}
 .kpis{display:none}
 .kpi{background:var(--card);backdrop-filter:blur(18px);color:var(--td);padding:12px 16px 10px;border-radius:var(--radius);border:1px solid var(--glass-border);box-shadow:var(--shadow),inset 0 1px 0 rgba(56,189,248,.1);text-align:left;position:relative;overflow:hidden;transition:transform .25s var(--ease),box-shadow .35s var(--ease);animation:fadeUp .5s var(--ease) both}
 .kpi:nth-child(1){animation-delay:.06s}.kpi:nth-child(2){animation-delay:.12s}.kpi:nth-child(3){animation-delay:.18s}.kpi:nth-child(4){animation-delay:.24s}.kpi:nth-child(5){animation-delay:.28s}.kpi:nth-child(6){animation-delay:.32s}
@@ -141,7 +140,6 @@ body>*{position:relative;z-index:1}
     <div class="ctrl">
       <span>月份：</span>
       <select id="monthSel" onchange="renderAll()"></select>
-      <span class="rate" id="overallRate">本月达标率 —</span>
     </div>
   </div>
   <div class="kpis" id="kpis"></div>
@@ -316,7 +314,6 @@ body>*{position:relative;z-index:1}
       document.getElementById("chartLegend").innerHTML = "";
       var cv = document.getElementById("dimChart");
       if (cv && cv.getContext) { var c = cv.getContext("2d"); c.clearRect(0, 0, cv.width, cv.height); }
-      document.getElementById("overallRate").textContent = "本月达标率 —";
       var tt = document.getElementById("tooltip"); if (tt) tt.style.display = "none";
       pieCanvasState = null; // 清空悬停命中状态，避免空画布上重绘旧数据
     }
@@ -325,7 +322,7 @@ body>*{position:relative;z-index:1}
       var ym = curMonth();
       // 空数据校验：选中月份取不到有效数据则不渲染任何内容
       if (!ym || !monthHasData(ym)) { showEmptyState(); return; }
-      renderKPIs(); renderCats(); renderCompare(); renderPieAndFail(); renderOverallRate(); initAutoScroll();
+      renderKPIs(); renderCats(); renderCompare(); renderPieAndFail(); initAutoScroll();
     }
     // 自动循环滚动：对指定容器初始化跑马灯效果（内容超出时出现滚动条并自动滚动，到底循环回顶部）
     function initAutoScroll() {
@@ -979,21 +976,6 @@ body>*{position:relative;z-index:1}
       // Fail list
       var box=document.getElementById("failList");if(!fails.length){box.innerHTML='<div class="empty">\uD83C\uDF89 \u672C\u6708\u6240\u6709\u76EE\u6807\u6307\u6807\u5168\u90E8\u8FBE\u6807</div>';return}
       fails.sort(function(a,b){return a.date<b.date?-1:a.date>b.date?1:0});box.innerHTML=fails.map(function(f){return '<div class="fail-item"><div class="fi-h"><span class="date">'+fmtDate(f.date)+'</span></div><div class="fi-b"><span class="nm">'+f.name+' / '+f.dim+'</span><span class="vals"><span class="act">'+f.val+'</span> / <span class="tgt">\u76EE\u6807 '+f.tgt+'</span></span></div></div>'}).join("");
-    }function renderOverallRate() {
-      var ym = curMonth();
-      var mr = DATA.daily.filter(function (r) { return (r.year + "-" + pad2(r.month)) === ym; });
-      var g = 0, t = 0;
-      DATA.metrics.forEach(function (m) {
-        if (m.target === null || m.target === undefined) return;
-        var d2 = mainDim(m.code);
-        var xs = mr.filter(function (r) { return r.code === m.code && r.dim === d2 && r.value !== null; });
-        if (!xs.length) return;
-        var s = 0; xs.forEach(function (r) { s += r.value; }); var a = s / xs.length;
-        var st = statusOf(m, a);
-        if (st === "g" || st === "r") { t++; if (st === "g") g++; }
-      });
-      var pct = t > 0 ? Math.round(g / t * 100) : 0;
-      document.getElementById("overallRate").textContent = "本月达标率 " + (t > 0 ? (pct + "% (" + g + "/" + t + ")") : "—");
     }
     // 入口：页面加载即初始化并首屏渲染
     init();

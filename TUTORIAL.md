@@ -143,7 +143,6 @@ http://localhost:7700/?api=https://your-worker.example.com/api/data
 
 - 月份下拉框：切换当年 1 到 12 月
 - 实时状态：显示“实时”或“缓存”
-- 总达标率：当月所有带目标指标按主维度求月均值后的达标占比
 
 ### KPI 卡片
 
