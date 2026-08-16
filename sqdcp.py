@@ -10,6 +10,8 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 
 import requests
 
+# ===== 飞书凭证与应用标识 =====
+# 凭证可通过环境变量覆盖；缺省值为本项目的示例 App，便于直接跑通。
 APP_ID = os.environ.get("FEISHU_APP_ID", "cli_aadc4c86b6791cee")
 APP_SECRET = os.environ.get("FEISHU_APP_SECRET", "g98NQlSXeF6iTuCOb9JACgQQnjGiFGnI")
 APP_TOKEN = "SokabZYA1a4cnMsmahzcD5UKnqe"
@@ -18,14 +20,17 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.join(BASE_DIR, "dashboard.html")
 TEMPLATE = os.path.join(BASE_DIR, "sqdcp.html")
 
+# ===== 本地服务配置 =====
 PORT = 7700
 CACHE_TTL = 300  # 接口结果缓存 5 分钟，避免前端刷新/重开时频繁打飞书 API
 _cache = {"data": None, "ts": 0}
 
+# 进程启动时一次性读入页面模板，供 build_html 注入与 serve 直接返回复用
 HTML_TEMPLATE = open(TEMPLATE, encoding="utf-8").read()
 
 
 def get_token():
+    """用 App ID/Secret 换取飞书 tenant_access_token，供后续接口调用鉴权。"""
     r = requests.post(f"{BASE}/auth/v3/tenant_access_token/internal",
                       json={"app_id": APP_ID, "app_secret": APP_SECRET})
     d = r.json()
@@ -35,10 +40,12 @@ def get_token():
 
 
 def auth(tk):
+    """组装带 Bearer 鉴权的请求头，供所有飞书数据接口复用。"""
     return {"Authorization": f"Bearer {tk}", "Content-Type": "application/json"}
 
 
 def list_tables(tk):
+    """列出多维表格下的全部数据表，返回 {表名: table_id} 字典。"""
     r = requests.get(f"{BASE}/bitable/v1/apps/{APP_TOKEN}/tables", headers=auth(tk))
     d = r.json()
     if d.get("code") != 0:
@@ -47,6 +54,7 @@ def list_tables(tk):
 
 
 def list_all_records(tk, tid):
+    """分页拉取某张表的全部记录，自动翻页直到 has_more 为假，返回记录列表。"""
     out = []
     page_token = None
     while True:
@@ -66,6 +74,7 @@ def list_all_records(tk, tid):
 
 
 def get_text(v):
+    """从飞书富文本字段里抽出展示用纯文本；兼容 list / dict / 标量三种形态。"""
     if v is None:
         return None
     if isinstance(v, list):
@@ -81,6 +90,7 @@ def get_text(v):
 
 
 def get_link_id(v):
+    """从飞书关联记录字段里取出被关联记录的 record_id，把每日数据表行关联回指标配置表。"""
     if isinstance(v, list) and v:
         first = v[0]
         if isinstance(first, dict):
@@ -138,6 +148,7 @@ def fetch_data(year=None):
         dt = datetime.datetime.fromtimestamp(date_ms / 1000, datetime.timezone.utc).date()
         if year is not None and dt.year != year:
             continue
+        # 数值字段允许是字符串，尝试转 float；失败则记为 None 视作无效值
         val = f.get("数值")
         if isinstance(val, str):
             try:
@@ -147,6 +158,7 @@ def fetch_data(year=None):
         daily.append({"date": dt.strftime("%Y-%m-%d"), "year": dt.year,
                       "month": dt.month, "day": dt.day, "code": m["code"],
                       "dim": get_text(f.get("维度")) or "", "value": val})
+        # 收集出现过的月份，供前端月份下拉与渲染使用
         months.add(f"{dt.year}-{dt.month:02d}")
 
     return {"metrics": metrics, "daily": daily, "months": sorted(months)}
@@ -157,6 +169,7 @@ def build_html(data):
     data_json = json.dumps(data, ensure_ascii=False, default=str)
     # 避免 JSON 里出现 </script>，破坏内嵌数据脚本
     data_json = data_json.replace("</", "<\\/")
+    # 占位结构与 sqdcp.html 内 <script id="sqdcp-data">__SQDCP_DATA__</script> 对齐
     placeholder = ">__SQDCP_DATA__</script>"
     if placeholder not in HTML_TEMPLATE:
         raise RuntimeError("sqdcp.html 缺少 __SQDCP_DATA__ 注入点")
@@ -164,6 +177,7 @@ def build_html(data):
 
 
 def get_data():
+    """serve 路由用：命中缓存直接返回，否则拉取当前年份数据并写入缓存。"""
     now = time.time()
     if _cache["data"] is not None and now - _cache["ts"] < CACHE_TTL:
         return _cache["data"]
@@ -175,6 +189,7 @@ def get_data():
 
 
 class Handler(BaseHTTPRequestHandler):
+    """本地 HTTP 服务：对外提供页面与数据接口，均允许跨域、禁缓存。"""
     def _send(self, code, body, ctype="application/json; charset=utf-8"):
         if isinstance(body, str):
             body = body.encode("utf-8")
@@ -186,6 +201,7 @@ class Handler(BaseHTTPRequestHandler):
         self.wfile.write(body)
 
     def do_GET(self):
+        # 路由一：首页直接返回页面模板（serve 模式同源轮询）
         if self.path in ("/", "/index.html"):
             try:
                 with open(TEMPLATE, "r", encoding="utf-8") as f:
@@ -193,12 +209,14 @@ class Handler(BaseHTTPRequestHandler):
             except Exception as e:
                 self._send(500, json.dumps({"error": str(e)}, ensure_ascii=False))
             return
+        # 路由二：数据接口，返回 JSON（经 get_data 命中缓存）
         if self.path.startswith("/api/data"):
             try:
                 self._send(200, json.dumps(get_data(), ensure_ascii=False, default=str))
             except Exception as e:
                 self._send(502, json.dumps({"error": str(e)}, ensure_ascii=False))
             return
+        # 路由三：其余路径统一 404
         self._send(404, json.dumps({"error": "not found"}))
 
     def log_message(self, *a):
@@ -206,6 +224,7 @@ class Handler(BaseHTTPRequestHandler):
 
 
 def cmd_build(year):
+    """build 子命令：拉数据 → 注入模板 → 写出 dashboard.html。"""
     data = fetch_data(year)
     html = build_html(data)
     with open(OUT, "w", encoding="utf-8") as f:
@@ -214,11 +233,13 @@ def cmd_build(year):
 
 
 def cmd_data(year):
+    """data 子命令：拉取数据并把 JSON 打到 stdout，便于管线调试。"""
     data = fetch_data(year)
     sys.stdout.write(json.dumps(data, ensure_ascii=False, default=str) + "\n")
 
 
 def cmd_serve():
+    """serve 子命令：起 HTTP 服务对外提供页面与数据接口。"""
     print(f"SQDCP dashboard server  ->  http://localhost:{PORT}")
     print("前端打开 http://localhost:7700/ 即可（同源，轮询无 CORS 问题）")
     HTTPServer(("0.0.0.0", PORT), Handler).serve_forever()
