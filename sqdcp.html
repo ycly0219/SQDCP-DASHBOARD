@@ -12,7 +12,6 @@
 @keyframes pulseGlow{0%,100%{box-shadow:0 4px 14px rgba(91,110,245,.4)}50%{box-shadow:0 6px 26px rgba(91,110,245,.72)}}
 @keyframes glimmer{0%,100%{opacity:.3}50%{opacity:.7}}
 /* 常驻动效：仅使用 opacity / transform，配合 will-change 实现 GPU 加速、无重排 */
-@keyframes warnLine{0%,100%{opacity:.22}50%{opacity:1}}                         /* 未达标行警示线 2.5s */
 @keyframes radarSpin{from{transform:translate(-50%,-50%) rotate(0deg)}to{transform:translate(-50%,-50%) rotate(360deg)}} /* 雷达扫描光环 14s */
 html,body{height:100vh;overflow-y:auto;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei","Source Han Sans SC","Noto Sans CJK SC",sans-serif}
 body{display:flex;flex-direction:column;padding:14px;gap:12px;position:relative;background:radial-gradient(1100px 620px at 10% -15%,rgba(56,189,248,.14),transparent 60%),radial-gradient(900px 520px at 95% 8%,rgba(129,140,248,.10),transparent 55%),radial-gradient(1000px 620px at 110% 115%,rgba(236,72,153,.08),transparent 55%),linear-gradient(135deg,#eef5fd 0%,#f4f8fe 48%,#eaf1fb 100%);color:var(--td);-webkit-font-smoothing:antialiased}
@@ -63,16 +62,16 @@ body>*{position:relative;z-index:1}
 .ci .owner{color:var(--tm);font-size:13px;font-weight:700;background:color-mix(in srgb,var(--catc) 5%,transparent);border:none;padding:1px 8px;border-radius:999px;white-space:nowrap}
 .ci .owner .lb{color:var(--tl);margin-right:3px}
 
-/* ===== 底部三栏 .row2/.panel ===== 指标对比表 / 未达标清单 / 五维达标率雷达图 */
+/* ===== 底部三栏 .row2/.panel ===== 指标对比表 / 问题跟踪清单 / 五维达标率雷达图 */
 .row2{display:grid;grid-template-columns:1.4fr 1.35fr .8fr;gap:10px;flex:1;min-height:0}
 .panel{background:var(--card);backdrop-filter:blur(18px);color:var(--td);padding:13px 16px;border-radius:var(--radius);border:1px solid var(--glass-border);box-shadow:var(--shadow),inset 0 1px 0 rgba(56,189,248,.08);display:flex;flex-direction:column;min-height:0;animation:fadeUp .6s var(--ease) both;position:relative}
 .panel:nth-child(1){animation-delay:.30s}.panel:nth-child(2){animation-delay:.36s}.panel:nth-child(3){animation-delay:.42s}
 .panel h3{font-size:18px;font-weight:900;color:#0f2547;margin-bottom:10px;flex:0 0 auto;padding-bottom:7px;border-bottom:1px solid rgba(56,189,248,.2);display:flex;align-items:center;gap:7px;letter-spacing:1px}
 .panel h3::before{content:"";display:inline-block;width:4px;height:19px;background:linear-gradient(180deg,#38bdf8,#818cf8);border-radius:3px;box-shadow:0 0 10px rgba(56,189,248,.85)}
 .panel-body{flex:1;overflow:hidden;display:flex;gap:10px;min-height:0}
-.cmp-col,.fail-col{flex:1;overflow-y:auto;font-size:13px;scrollbar-width:thin;scrollbar-color:rgba(148,163,184,.2) transparent}
-.cmp-col::-webkit-scrollbar,.fail-col::-webkit-scrollbar{width:4px}
-.cmp-col::-webkit-scrollbar-thumb,.fail-col::-webkit-scrollbar-thumb{background:rgba(148,163,184,.2);border-radius:2px}
+.cmp-col,.issue-col{flex:1;overflow-y:auto;font-size:13px;scrollbar-width:thin;scrollbar-color:rgba(148,163,184,.2) transparent}
+.cmp-col::-webkit-scrollbar,.issue-col::-webkit-scrollbar{width:4px}
+.cmp-col::-webkit-scrollbar-thumb,.issue-col::-webkit-scrollbar-thumb{background:rgba(148,163,184,.2);border-radius:2px}
 .tb{width:100%;border-collapse:separate;border-spacing:0;font-size:13px}
 .tb th,.tb td{padding:10px 12px;border-bottom:1px solid rgba(56,189,248,.08);text-align:left;font-size:13px;color:var(--tm);font-weight:400}
 .tb thead th{position:sticky;top:0;background:rgba(240,247,255,.96);color:#0369a1;font-weight:700;font-size:11px;z-index:2;box-shadow:0 1px 0 rgba(56,189,248,.15);letter-spacing:.5px}
@@ -94,17 +93,23 @@ body>*{position:relative;z-index:1}
 .chart-legend .dot{width:12px;height:12px;border-radius:50%;flex-shrink:0;display:inline-block;box-shadow:0 0 0 2px rgba(255,255,255,.14)}
 .chart-legend .lg-pct{font-weight:800;color:var(--accent);margin-left:2px;font-variant-numeric:tabular-nums;font-size:16px;text-shadow:0 0 12px rgba(56,189,248,.5)}
 .chart-legend .lg-row>span:not(.lg-pct):not(.dot){color:#1e293b!important;font-weight:600}
-#dataStatus{font-size:11px;color:var(--tm);margin-right:6px;letter-spacing:.3px}.fail-col .empty{color:var(--good);text-align:center;padding:24px 12px;font-weight:600;font-size:13px}
-.fail-item{padding:6px 0;border-bottom:1px solid rgba(56,189,248,.08);animation:fadeUp .4s var(--ease) both;position:relative}
-.fail-item::before{content:"";position:absolute;left:0;top:7px;bottom:7px;width:3px;border-radius:2px;background:linear-gradient(180deg,var(--bad),rgba(251,113,133,.25));opacity:.22;animation:warnLine 2.5s ease-in-out infinite;will-change:opacity}
-.fail-item:last-child{border-bottom:none}
-.fail-item .fi-h{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--tm);margin-bottom:3px}
-.fail-item .fi-h .date{background:rgba(251,191,36,.15);color:var(--warn);padding:1px 8px;border-radius:6px;font-weight:700}
-.fail-item .fi-b{display:flex;justify-content:space-between;align-items:center;gap:8px}
-.fail-item .fi-b .nm{font-weight:500;color:var(--td)}
-.fail-item .fi-b .vals{font-size:13px;color:var(--tm);font-variant-numeric:tabular-nums}
-.fail-item .fi-b .vals .act{color:var(--bad);font-weight:700}
-.fail-item .fi-b .vals .tgt{color:var(--tl)}
+#dataStatus{font-size:11px;color:var(--tm);margin-right:6px;letter-spacing:.3px}.issue-col .empty{color:var(--good);text-align:center;padding:24px 12px;font-weight:600;font-size:13px}
+.issue-item{padding:6px 0 6px 10px;border-bottom:1px solid rgba(56,189,248,.08);animation:fadeUp .4s var(--ease) both;position:relative}
+.issue-item::before{content:"";position:absolute;left:0;top:7px;bottom:7px;width:3px;border-radius:2px;background:var(--neutral);opacity:.45}
+.issue-item.st-doing::before{background:var(--warn);opacity:.55}
+.issue-item:last-child{border-bottom:none}
+.issue-item .ii-h{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--tm);margin-bottom:3px}
+.issue-item .ii-h .date{background:rgba(251,191,36,.15);color:var(--warn);padding:1px 8px;border-radius:6px;font-weight:700;flex:0 0 auto}
+.issue-item .ii-h .st{font-size:11px;padding:1px 7px;border-radius:999px;font-weight:700;flex:0 0 auto}
+.issue-item.st-open .ii-h .st{color:var(--neutral);background:rgba(100,116,139,.12)}
+.issue-item.st-doing .ii-h .st{color:var(--warn);background:rgba(245,158,11,.14)}
+.issue-item .ii-h .owner{color:var(--tl);margin-left:auto;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:88px}
+.issue-item .ii-b{display:flex;flex-direction:column;gap:3px}
+.issue-item .ii-b .nm{font-weight:600;color:var(--td);font-size:12px}
+.issue-item .ii-b .desc{color:var(--tm);font-size:12px;line-height:1.45}
+.issue-item .ii-b .miss{color:#d97706;background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.3);padding:2px 8px;border-radius:6px;font-size:11px;font-weight:600;align-self:flex-start}
+.issue-item .ii-b .pl{color:var(--tl);font-size:11px}
+.issue-closed{margin-top:6px;padding:7px 10px;border-radius:8px;background:rgba(16,185,129,.08);border:1px dashed rgba(16,185,129,.35);color:var(--good);font-size:12px;font-weight:700;text-align:center}
 .dash-empty{display:flex;align-items:center;justify-content:center;min-height:90px;color:var(--tm);font-size:13px;font-weight:600}
 @media(max-width:1200px){.kpis{grid-template-columns:repeat(2,1fr)}.cats{grid-template-columns:repeat(3,1fr)}.row2{grid-template-columns:1fr 1fr}}
 @media(max-width:800px){.cats{grid-template-columns:repeat(2,1fr)}.row2{grid-template-columns:1fr}}
@@ -140,10 +145,10 @@ body>*{position:relative;z-index:1}
       </div>
     </div>
     <div class="panel">
-      <h3>未达标指标清单</h3>
+      <h3>问题跟踪清单</h3>
       <div class="panel-body">
-        <div class="fail-col">
-          <div id="failList"></div>
+        <div class="issue-col">
+          <div id="issueList"></div>
         </div>
       </div>
     </div>
@@ -188,6 +193,7 @@ body>*{position:relative;z-index:1}
           DATA.metrics = nd.metrics;
           DATA.daily = nd.daily;
           DATA.months = nd.months;
+          DATA.issues = nd.issues || [];
           renderAll();        // 用最新数据重渲染
           markUpdated(true);
         }
@@ -254,6 +260,11 @@ body>*{position:relative;z-index:1}
     function pad2(n) { return n < 10 ? "0" + n : String(n); }
     // 把 "2026-02-08" 形式日期转成 "2月8日" 的中文展示
     function fmtDate(d) { var p = d.split("-"); return p[1] + "月" + parseInt(p[2], 10) + "日"; }
+    // 转义展示用文本，避免飞书内容破坏页面结构
+    function esc(s) {
+      return String(s === null || s === undefined ? "" : s)
+        .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+    }
     // 初始化：填充右上角月份下拉框（当年 1~12 月），默认选中当前月份，然后首次渲染
     function init() {
       var y = new Date().getFullYear();
@@ -289,16 +300,18 @@ body>*{position:relative;z-index:1}
     }
     // 取当前选中月份（来自右上角下拉框），这是所有渲染函数的数据基准
     function curMonth() { return document.getElementById("monthSel").value; }
-    // 判断某月份在原始数据中是否存在任何有效日记录
+    // 判断某月份在原始数据中是否存在有效日记录或问题记录
     function monthHasData(ym) {
-      return DATA.daily.some(function (r) { return (r.year + "-" + pad2(r.month)) === ym; });
+      var hasDaily = DATA.daily.some(function (r) { return (r.year + "-" + pad2(r.month)) === ym; });
+      var hasIssues = (DATA.issues || []).some(function (r) { return (r.year + "-" + pad2(r.month)) === ym; });
+      return hasDaily || hasIssues;
     }
     // 选中月份无数据时，清空主区域并给出统一"无数据"提示
     function showEmptyState() {
       document.getElementById("kpis").innerHTML = "";
       document.getElementById("cats").innerHTML = '<div class="dash-empty">本月暂无数据</div>';
       document.getElementById("cmpTable").innerHTML = '<div class="dash-empty">本月暂无数据</div>';
-      document.getElementById("failList").innerHTML = '<div class="dash-empty">本月暂无数据</div>';
+      renderIssues();
       document.getElementById("chartLegend").innerHTML = "";
       var cv = document.getElementById("dimChart");
       if (cv && cv.getContext) { var c = cv.getContext("2d"); c.clearRect(0, 0, cv.width, cv.height); }
@@ -309,12 +322,12 @@ body>*{position:relative;z-index:1}
       var ym = curMonth();
       // 空数据校验：选中月份取不到有效数据则不渲染任何内容
       if (!ym || !monthHasData(ym)) { showEmptyState(); return; }
-      renderKPIs(); renderCats(); renderCompare(); renderPieAndFail(); initAutoScroll();
+      renderKPIs(); renderCats(); renderCompare(); renderPieAndFail(); renderIssues(); initAutoScroll();
     }
     // 自动循环滚动：对指定容器初始化跑马灯效果（内容超出时出现滚动条并自动滚动，到底循环回顶部）
     function initAutoScroll() {
       var c1 = document.querySelector(".cmp-col");
-      var c2 = document.querySelector(".fail-col");
+      var c2 = document.querySelector(".issue-col");
       autoScrollFor(c1);
       autoScrollFor(c2);
     }
@@ -817,14 +830,11 @@ body>*{position:relative;z-index:1}
       });
       tb.innerHTML = '<thead><tr><th>指标</th><th>维度</th><th>本月均值</th><th>目标</th><th>状态</th><th>环比</th></tr></thead><tbody>' + (rows.join("") || '<tr><td colspan="6" style="text-align:center;color:#aaa">本月无数据</td></tr>') + '</tbody>';
     }
-    // 渲染右侧"红绿灯状态分布"饼图 + "未达标指标清单"
+    // 渲染右侧"五维达标率"雷达图；问题清单由 renderIssues 单独渲染
     var pieCanvasState = null;
     function renderPieAndFail() {
       var ym = curMonth(); var mr = DATA.daily.filter(function(r){return(r.year+"-"+pad2(r.month))===ym});
-      var fails = [], p = ym.split("-"), Y = +p[0], M = +p[1], dimDays = new Date(Y, M, 0).getDate();
-      // ① 收集未达标项：逐日逐指标按主维度求均值，statusOf 判红则记入 fails
-      for(var d=1;d<=dimDays;d++){var ds=Y+"-"+pad2(M)+"-"+pad2(d);var dr=mr.filter(function(x){return x.date===ds});if(!dr.length)continue;
-        DATA.metrics.forEach(function(m){if(m.target===null||m.target===undefined)return;var d2=mainDim(m.code);var xs=dr.filter(function(x){return x.code===m.code&&x.dim===d2&&x.value!==null});if(!xs.length)return;var s=0;xs.forEach(function(x){s+=x.value});var a=s/xs.length;if(statusOf(m,a)==="r")fails.push({date:ds,name:m.name,dim:d2,val:fmt(a,m.unit),tgt:m.target});});}
+      var p = ym.split("-"), Y = +p[0], M = +p[1], dimDays = new Date(Y, M, 0).getDate();
       // ② Canvas 初始化：按容器尺寸 × devicePixelRatio 建立高清画布并清空（dpr 缩放，避免模糊）
       var cv=document.getElementById("dimChart"),wrap=cv.parentElement;var w=wrap.clientWidth||240,h=wrap.clientHeight||160;var dpr=window.devicePixelRatio||1;
       cv.width=Math.round(w*dpr);cv.height=Math.round(h*dpr);cv.style.width=w+"px";cv.style.height=h+"px";var ctx=cv.getContext("2d");ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,w,h);
@@ -875,9 +885,34 @@ body>*{position:relative;z-index:1}
       ctx.fillStyle="rgba(255,255,255,.1)";ctx.font="8px sans-serif";ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText("SQDCP",cx,cy);
       // ⑩ 图例：legend 当前由 .chart-legend{display:none} 隐藏，HTML 仍生成以便日后复用
       var lhtml="";dims.forEach(function(dd){lhtml+='<div class="lg-row"><span class="dot" style="background:'+dd.c+'"></span><span style="color:#94a3b8">'+dd.l+'</span><span class="lg-pct">'+dd.pct+'%</span></div>'});document.getElementById("chartLegend").innerHTML=lhtml;
-      // ⑪ 未达标清单：按日期升序渲染卡片；无未达标项则显示全部达标的祝贺提示
-      var box=document.getElementById("failList");if(!fails.length){box.innerHTML='<div class="empty">\uD83C\uDF89 \u672C\u6708\u6240\u6709\u76EE\u6807\u6307\u6807\u5168\u90E8\u8FBE\u6807</div>';return}
-      fails.sort(function(a,b){return a.date<b.date?-1:a.date>b.date?1:0});box.innerHTML=fails.map(function(f){return '<div class="fail-item"><div class="fi-h"><span class="date">'+fmtDate(f.date)+'</span></div><div class="fi-b"><span class="nm">'+f.name+' / '+f.dim+'</span><span class="vals"><span class="act">'+f.val+'</span> / <span class="tgt">\u76EE\u6807 '+f.tgt+'</span></span></div></div>'}).join("");
+    }
+    // 渲染中间"问题跟踪清单"：按问题日期所在月过滤，未关闭置顶、已关闭折叠计数
+    function renderIssues() {
+      var ym = curMonth();
+      var box = document.getElementById("issueList");
+      var issues = (DATA.issues || []).filter(function (r) {
+        return (r.year + "-" + pad2(r.month)) === ym;
+      });
+      if (!issues.length) { box.innerHTML = '<div class="empty">本月暂无问题</div>'; return; }
+      var order = { "未开始": 0, "进行中": 1, "已关闭": 2 };
+      issues.sort(function (a, b) {
+        var d = (order[a.status] !== undefined ? order[a.status] : 1) - (order[b.status] !== undefined ? order[b.status] : 1);
+        if (d) return d;
+        return a.date < b.date ? -1 : a.date > b.date ? 1 : (a.id < b.id ? -1 : 1);
+      });
+      var html = "";
+      var closed = 0;
+      issues.forEach(function (r) {
+        if (r.status === "已关闭") { closed++; return; }
+        var stCls = r.status === "进行中" ? "st-doing" : "st-open";
+        var stTxt = r.status || "未开始";
+        var owner = r.owner ? '<span class="owner">' + esc(r.owner) + "</span>" : "";
+        var miss = r.known ? "" : '<span class="miss">指标编号 ' + esc(r.code || "未填写") + " 未配置</span>";
+        var pl = r.plannedClose ? '<span class="pl">计划 ' + fmtDate(r.plannedClose) + " 关闭</span>" : "";
+        html += '<div class="issue-item ' + stCls + '"><div class="ii-h"><span class="date">' + fmtDate(r.date) + '</span><span class="st">' + stTxt + "</span>" + owner + '</div><div class="ii-b"><span class="nm">' + esc(r.name) + "</span>" + miss + '<span class="desc">' + esc(r.desc) + "</span>" + pl + "</div></div>";
+      });
+      if (closed) html += '<div class="issue-closed">已关闭 ' + closed + " 条</div>";
+      box.innerHTML = html;
     }
     // 入口：页面加载即初始化并首屏渲染
     init();

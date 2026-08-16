@@ -19,6 +19,7 @@ BASE = "https://open.feishu.cn/open-apis"
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.join(BASE_DIR, "dashboard.html")
 TEMPLATE = os.path.join(BASE_DIR, "sqdcp.html")
+ISSUE_TABLE_NAME = "问题跟踪表"
 
 # ===== 本地服务配置 =====
 PORT = 7700
@@ -103,21 +104,57 @@ def get_link_id(v):
     return v
 
 
+def to_date_str(v):
+    """把飞书日期字段（毫秒时间戳）转成 YYYY-MM-DD；非时间戳返回 None。"""
+    if not isinstance(v, (int, float)):
+        return None
+    return datetime.datetime.fromtimestamp(v / 1000, datetime.timezone.utc).date().strftime("%Y-%m-%d")
+
+
+def issue_table_fields():
+    """问题跟踪表的建表字段模板，供 init-issue-table 幂等创建使用。"""
+    return [
+        {"field_name": "问题日期", "type": 5},
+        {"field_name": "指标编号", "type": 1},
+        {"field_name": "问题描述", "type": 1},
+        {"field_name": "状态", "type": 3,
+         "property": {"options": [{"name": "未开始"}, {"name": "进行中"}, {"name": "已关闭"}]}},
+        {"field_name": "负责人", "type": 1},
+        {"field_name": "计划关闭日期", "type": 5},
+        {"field_name": "实际关闭日期", "type": 5},
+    ]
+
+
+def create_issue_table(tk):
+    """调用飞书 bitable API 创建「问题跟踪表」。"""
+    payload = {"table": {"name": ISSUE_TABLE_NAME, "fields": issue_table_fields()}}
+    r = requests.post(f"{BASE}/bitable/v1/apps/{APP_TOKEN}/tables",
+                      headers=auth(tk), json=payload)
+    d = r.json()
+    if d.get("code") != 0:
+        raise RuntimeError(f"create issue table failed: {d}")
+
+
 def fetch_data(year=None):
-    """从飞书多维表格拉取指标配置与每日数据。
+    """从飞书多维表格拉取指标配置、每日数据与问题跟踪表。
 
     year: 仅保留该年份的数据；为 None 时返回全部。
-    返回 {metrics:[...], daily:[...], months:[...]}，供前端/接口复用。
+    返回 {metrics:[...], daily:[...], issues:[...], months:[...]}，供前端/接口复用。
     """
     print("[1] get token ...", file=sys.stderr)
     token = get_token()
     tables = list_tables(token)
     tid_metric = tables["指标配置表"]
     tid_daily = tables["每日数据表"]
+    if ISSUE_TABLE_NAME not in tables:
+        raise RuntimeError(
+            f"飞书多维表格缺少「{ISSUE_TABLE_NAME}」，请先运行: python sqdcp.py init-issue-table")
+    tid_issue = tables[ISSUE_TABLE_NAME]
 
     print("[2] read metric config ...", file=sys.stderr)
     mrecs = list_all_records(token, tid_metric)
     rid2metric = {}
+    code2metric = {}
     metrics = []
     for r in mrecs:
         f = r["fields"]
@@ -130,6 +167,7 @@ def fetch_data(year=None):
              "targetDir": get_text(f.get("目标方向")) or "",
              "unit": get_text(f.get("单位")) or ""}
         rid2metric[r["record_id"]] = m
+        code2metric[str(code)] = m
         metrics.append(m)
 
     print("[3] read daily ...", file=sys.stderr)
@@ -161,7 +199,39 @@ def fetch_data(year=None):
         # 收集出现过的月份，供前端月份下拉与渲染使用
         months.add(f"{dt.year}-{dt.month:02d}")
 
-    return {"metrics": metrics, "daily": daily, "months": sorted(months)}
+    print("[4] read issues ...", file=sys.stderr)
+    irecs = list_all_records(token, tid_issue)
+    issues = []
+    for r in irecs:
+        f = r["fields"]
+        date_str = to_date_str(f.get("问题日期"))
+        if date_str is None:
+            continue
+        dt = datetime.datetime.strptime(date_str, "%Y-%m-%d").date()
+        if year is not None and dt.year != year:
+            continue
+        code = (get_text(f.get("指标编号")) or "").strip()
+        m = code2metric.get(code)
+        desc = (get_text(f.get("问题描述")) or "").strip() or "未填写问题描述"
+        status = get_text(f.get("状态")) or "未开始"
+        issues.append({
+            "id": r.get("record_id", ""),
+            "date": date_str,
+            "year": dt.year,
+            "month": dt.month,
+            "day": dt.day,
+            "code": code,
+            "name": m["name"] if m else (code or "未填写指标编号"),
+            "known": bool(m),
+            "desc": desc,
+            "status": status,
+            "owner": (get_text(f.get("负责人")) or "").strip(),
+            "plannedClose": to_date_str(f.get("计划关闭日期")),
+            "actualClose": to_date_str(f.get("实际关闭日期")),
+        })
+        months.add(f"{dt.year}-{dt.month:02d}")
+
+    return {"metrics": metrics, "daily": daily, "issues": issues, "months": sorted(months)}
 
 
 def build_html(data):
@@ -238,6 +308,18 @@ def cmd_data(year):
     sys.stdout.write(json.dumps(data, ensure_ascii=False, default=str) + "\n")
 
 
+def cmd_init_issue_table():
+    """init-issue-table 子命令：幂等创建飞书「问题跟踪表」。"""
+    print("[1] get token ...", file=sys.stderr)
+    tk = get_token()
+    tables = list_tables(tk)
+    if ISSUE_TABLE_NAME in tables:
+        print(f"「{ISSUE_TABLE_NAME}」已存在，跳过创建")
+        return
+    create_issue_table(tk)
+    print(f"已创建「{ISSUE_TABLE_NAME}」")
+
+
 def cmd_serve():
     """serve 子命令：起 HTTP 服务对外提供页面与数据接口。"""
     print(f"SQDCP dashboard server  ->  http://localhost:{PORT}")
@@ -258,6 +340,7 @@ def parse_args(argv=None):
     data = sub.add_parser("data", help="从飞书拉取数据并输出 JSON")
     data.add_argument("year", nargs="?", type=int,
                       help="仅保留该年份；省略则包含全部年份")
+    sub.add_parser("init-issue-table", help="幂等创建飞书「问题跟踪表」")
     return parser.parse_args(argv)
 
 
@@ -268,6 +351,8 @@ def main(argv=None):
         cmd_build(year)
     elif args.command == "data":
         cmd_data(year)
+    elif args.command == "init-issue-table":
+        cmd_init_issue_table()
     else:
         cmd_serve()
 
