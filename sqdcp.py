@@ -117,6 +117,7 @@ def issue_table_fields():
         {"field_name": "问题日期", "type": 5},
         {"field_name": "指标编号", "type": 1},
         {"field_name": "问题描述", "type": 1},
+        {"field_name": "行动", "type": 1},
         {"field_name": "状态", "type": 3,
          "property": {"options": [{"name": "未开始"}, {"name": "进行中"}, {"name": "已关闭"}]}},
         {"field_name": "负责人", "type": 1},
@@ -133,6 +134,25 @@ def create_issue_table(tk):
     d = r.json()
     if d.get("code") != 0:
         raise RuntimeError(f"create issue table failed: {d}")
+
+
+def list_table_fields(tk, tid):
+    """列出某张数据表的字段，返回字段列表供幂等迁移检查。"""
+    r = requests.get(f"{BASE}/bitable/v1/apps/{APP_TOKEN}/tables/{tid}/fields",
+                     headers=auth(tk))
+    d = r.json()
+    if d.get("code") != 0:
+        raise RuntimeError(f"list issue table fields failed: {d}")
+    return d["data"]["items"]
+
+
+def create_issue_field(tk, tid, field_name):
+    """在现有「问题跟踪表」中补建缺失字段，不清空已有记录。"""
+    r = requests.post(f"{BASE}/bitable/v1/apps/{APP_TOKEN}/tables/{tid}/fields",
+                      headers=auth(tk), json={"field_name": field_name, "type": 1})
+    d = r.json()
+    if d.get("code") != 0:
+        raise RuntimeError(f"create issue field failed: {d}")
 
 
 def fetch_data(year=None):
@@ -224,6 +244,7 @@ def fetch_data(year=None):
             "name": m["name"] if m else (code or "未填写指标编号"),
             "known": bool(m),
             "desc": desc,
+            "action": (get_text(f.get("行动")) or "").strip(),
             "status": status,
             "owner": (get_text(f.get("负责人")) or "").strip(),
             "plannedClose": to_date_str(f.get("计划关闭日期")),
@@ -314,7 +335,14 @@ def cmd_init_issue_table():
     tk = get_token()
     tables = list_tables(tk)
     if ISSUE_TABLE_NAME in tables:
-        print(f"「{ISSUE_TABLE_NAME}」已存在，跳过创建")
+        tid = tables[ISSUE_TABLE_NAME]
+        fields = list_table_fields(tk, tid)
+        names = {it.get("field_name") for it in fields}
+        if "行动" in names:
+            print(f"「{ISSUE_TABLE_NAME}」已存在且已包含「行动」，跳过创建")
+            return
+        create_issue_field(tk, tid, "行动")
+        print(f"已为「{ISSUE_TABLE_NAME}」补建「行动」字段")
         return
     create_issue_table(tk)
     print(f"已创建「{ISSUE_TABLE_NAME}」")

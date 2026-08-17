@@ -11,8 +11,6 @@
 @keyframes fadeUp{from{opacity:0;translate:0 18px}to{opacity:1;translate:0 0}}
 @keyframes pulseGlow{0%,100%{box-shadow:0 4px 14px rgba(91,110,245,.4)}50%{box-shadow:0 6px 26px rgba(91,110,245,.72)}}
 @keyframes glimmer{0%,100%{opacity:.3}50%{opacity:.7}}
-/* 常驻动效：仅使用 opacity / transform，配合 will-change 实现 GPU 加速、无重排 */
-@keyframes radarSpin{from{transform:translate(-50%,-50%) rotate(0deg)}to{transform:translate(-50%,-50%) rotate(360deg)}} /* 雷达扫描光环 14s */
 html,body{height:100vh;overflow-y:auto;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei","Source Han Sans SC","Noto Sans CJK SC",sans-serif}
 body{display:flex;flex-direction:column;padding:14px;gap:12px;position:relative;background:radial-gradient(1100px 620px at 10% -15%,rgba(56,189,248,.14),transparent 60%),radial-gradient(900px 520px at 95% 8%,rgba(129,140,248,.10),transparent 55%),radial-gradient(1000px 620px at 110% 115%,rgba(236,72,153,.08),transparent 55%),linear-gradient(135deg,#eef5fd 0%,#f4f8fe 48%,#eaf1fb 100%);color:var(--td);-webkit-font-smoothing:antialiased}
 body::before{content:"";position:fixed;top:0;left:0;width:100%;height:100%;background-image:linear-gradient(rgba(37,99,235,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(37,99,235,.05) 1px,transparent 1px);background-size:48px 48px;pointer-events:none;z-index:0;animation:glimmer 8s ease-in-out infinite}
@@ -62,10 +60,10 @@ body>*{position:relative;z-index:1}
 .ci .owner{color:var(--tm);font-size:13px;font-weight:700;background:color-mix(in srgb,var(--catc) 5%,transparent);border:none;padding:1px 8px;border-radius:999px;white-space:nowrap}
 .ci .owner .lb{color:var(--tl);margin-right:3px}
 
-/* ===== 底部三栏 .row2/.panel ===== 问题跟踪清单 / 指标对比表 / 五维达标率雷达图 */
-.row2{display:grid;grid-template-columns:1.4fr 1.35fr .8fr;gap:10px;flex:1;min-height:0}
+/* ===== 底部两栏 .row2/.panel ===== 问题跟踪清单 / 指标对比表 */
+.row2{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;flex:1;min-height:0}
 .panel{background:var(--card);backdrop-filter:blur(18px);color:var(--td);padding:13px 16px;border-radius:var(--radius);border:1px solid var(--glass-border);box-shadow:var(--shadow),inset 0 1px 0 rgba(56,189,248,.08);display:flex;flex-direction:column;min-height:0;animation:fadeUp .6s var(--ease) both;position:relative}
-.panel:nth-child(1){animation-delay:.30s}.panel:nth-child(2){animation-delay:.36s}.panel:nth-child(3){animation-delay:.42s}
+.panel:nth-child(1){animation-delay:.30s;grid-column:span 3}.panel:nth-child(2){animation-delay:.36s;grid-column:span 2}
 .panel h3{font-size:18px;font-weight:900;color:#0f2547;margin-bottom:10px;flex:0 0 auto;padding-bottom:7px;border-bottom:1px solid rgba(56,189,248,.2);display:flex;align-items:center;gap:7px;letter-spacing:1px}
 .panel h3::before{content:"";display:inline-block;width:4px;height:19px;background:linear-gradient(180deg,#38bdf8,#818cf8);border-radius:3px;box-shadow:0 0 10px rgba(56,189,248,.85)}
 .panel-body{flex:1;overflow:hidden;display:flex;gap:10px;min-height:0}
@@ -81,28 +79,20 @@ body>*{position:relative;z-index:1}
 #cmpTable td:nth-child(4){font-variant-numeric:tabular-nums;color:var(--tl)}
 .tb .g{color:var(--good);font-weight:700}
 .tb .r{color:var(--bad);font-weight:700}
+#cmpTable th,#cmpTable td,.issueTable th,.issueTable td{text-align:center}
 
 
-.chart-col{display:flex;flex-direction:column;flex:1;gap:6px;min-height:240px;position:relative;padding:10px 14px;border-radius:14px;background:transparent;border:none;box-shadow:none}
-.chart-col canvas{width:100%;flex:1;min-height:0;border-radius:10px;position:relative;z-index:1}
-/* 雷达图底层：同心圆 + 扇形扫描光环，transform 自转（14s），置于画布之下 */
-.chart-col::before{content:"";position:absolute;top:50%;left:50%;width:min(72%,220px);height:min(72%,220px);transform:translate(-50%,-50%);border-radius:50%;border:1px solid rgba(56,189,248,.14);background:conic-gradient(from 0deg,rgba(56,189,248,.22),transparent 55deg),repeating-radial-gradient(circle,rgba(56,189,248,.1) 0 1px,transparent 1px 20px);opacity:.5;z-index:0;pointer-events:none;animation:radarSpin 14s linear infinite;will-change:transform}
-.chart-legend{display:none}
-/* 图例 .chart-legend 当前由 display:none 隐藏，HTML 仍由 renderPieAndFail 生成以便日后复用 */
-.chart-legend .lg-row{display:flex;align-items:center;gap:7px;padding:7px 14px 7px 11px;border-radius:11px;background:rgba(14,165,233,.06);font-size:13px;font-weight:700;border:1px solid rgba(255,255,255,.16);box-shadow:0 4px 14px -4px rgba(0,0,0,.45)}
-.chart-legend .dot{width:12px;height:12px;border-radius:50%;flex-shrink:0;display:inline-block;box-shadow:0 0 0 2px rgba(255,255,255,.14)}
-.chart-legend .lg-pct{font-weight:800;color:var(--accent);margin-left:2px;font-variant-numeric:tabular-nums;font-size:16px;text-shadow:0 0 12px rgba(56,189,248,.5)}
-.chart-legend .lg-row>span:not(.lg-pct):not(.dot){color:#1e293b!important;font-weight:600}
 #dataStatus{font-size:11px;color:var(--tm);margin-right:6px;letter-spacing:.3px}
-.issueTable{table-layout:fixed;width:100%;min-width:472px}
+.issueTable{table-layout:fixed;width:100%;min-width:600px}
 .issueTable td{vertical-align:top;font-size:12px;padding:12px 10px;word-wrap:break-word;overflow-wrap:anywhere}
 .issueTable thead th{position:sticky;top:0;z-index:3;background:#f8fbff;color:#0369a1;border-bottom:1px solid rgba(56,189,248,.22);white-space:nowrap;padding:9px 10px}
 .issueTable th:nth-child(1),.issueTable td:nth-child(1){width:auto}
-.issueTable th:nth-child(2),.issueTable td:nth-child(2){width:70px}
-.issueTable th:nth-child(3),.issueTable td:nth-child(3){width:88px}
-.issueTable th:nth-child(4),.issueTable td:nth-child(4){width:100px;font-variant-numeric:tabular-nums}
-.issueTable th:nth-child(5),.issueTable td:nth-child(5){width:78px;font-variant-numeric:tabular-nums}
-.issueTable th:nth-child(6),.issueTable td:nth-child(6){width:96px}
+.issueTable th:nth-child(2),.issueTable td:nth-child(2){width:100px}
+.issueTable th:nth-child(3),.issueTable td:nth-child(3){width:70px}
+.issueTable th:nth-child(4),.issueTable td:nth-child(4){width:88px}
+.issueTable th:nth-child(5),.issueTable td:nth-child(5){width:130px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.issueTable th:nth-child(6),.issueTable td:nth-child(6){width:78px;font-variant-numeric:tabular-nums}
+.issueTable th:nth-child(7),.issueTable td:nth-child(7){width:96px}
 .issueTable tbody tr.row-open td{background:rgba(100,116,139,.035)}
 .issueTable tbody tr.row-doing td{background:rgba(245,158,11,.05)}
 .issueTable tbody tr.row-open:hover td,.issueTable tbody tr.row-doing:hover td{background:rgba(56,189,248,.08)}
@@ -117,13 +107,15 @@ body>*{position:relative;z-index:1}
 @media(max-width:1500px){
 .issueTable td{padding:10px 8px}
 .issueTable thead th{padding:8px}
+.issueTable th:nth-child(2),.issueTable td:nth-child(2){width:78px}
 .issueTable th:nth-child(3),.issueTable td:nth-child(3){width:62px}
 .issueTable th:nth-child(4),.issueTable td:nth-child(4){width:100px}
-.issueTable th:nth-child(5),.issueTable td:nth-child(5){width:66px}
+.issueTable th:nth-child(5),.issueTable td:nth-child(5){width:130px;white-space:nowrap}
 .issueTable th:nth-child(6),.issueTable td:nth-child(6){width:76px}
+.issueTable th:nth-child(7),.issueTable td:nth-child(7){width:96px}
 }
 .dash-empty{display:flex;align-items:center;justify-content:center;min-height:90px;color:var(--tm);font-size:13px;font-weight:600}
-@media(max-width:1200px){.kpis{grid-template-columns:repeat(2,1fr)}.cats{grid-template-columns:repeat(3,1fr)}.row2{grid-template-columns:1fr 1fr}}
+@media(max-width:1200px){.kpis{grid-template-columns:repeat(2,1fr)}.cats{grid-template-columns:repeat(3,1fr)}.row2{grid-template-columns:1fr 1fr}.row2>.panel{grid-column:auto}}
 @media(max-width:800px){.cats{grid-template-columns:repeat(2,1fr)}.row2{grid-template-columns:1fr}}
 @media(max-width:520px){.cats{grid-template-columns:1fr}.row2{grid-template-columns:1fr}}
 </style>
@@ -161,15 +153,6 @@ body>*{position:relative;z-index:1}
       <div class="panel-body">
         <div class="cmp-col">
           <table class="tb" id="cmpTable"></table>
-        </div>
-      </div>
-    </div>
-    <div class="panel">
-      <h3>五维达标率对比</h3>
-      <div class="panel-body">
-        <div class="chart-col">
-          <canvas id="dimChart"></canvas>
-          <div class="chart-legend" id="chartLegend"></div>
         </div>
       </div>
     </div>
@@ -299,11 +282,11 @@ body>*{position:relative;z-index:1}
         ctrl.insertBefore(sp, ctrl.firstChild);
       }
       renderAll();
-      // 窗口尺寸变化时，按新可用空间重新适配饼图，维持响应式、避免截断
+      // 窗口尺寸变化时，按新可用空间重新适配字母日历，维持响应式
       var rz;
       window.addEventListener("resize", function () {
         clearTimeout(rz);
-        rz = setTimeout(function () { renderPieAndFail(); fitLetterGrids(); }, 150);
+        rz = setTimeout(function () { fitLetterGrids(); }, 150);
       });
       // ▶ 方案B 轮询：页面加载立即触发首次实时查询，随后每 4 小时自动重复
       loadData();
@@ -324,17 +307,13 @@ body>*{position:relative;z-index:1}
       document.getElementById("cats").innerHTML = '<div class="dash-empty">本月暂无数据</div>';
       document.getElementById("cmpTable").innerHTML = '<div class="dash-empty">本月暂无数据</div>';
       renderIssues();
-      document.getElementById("chartLegend").innerHTML = "";
-      var cv = document.getElementById("dimChart");
-      if (cv && cv.getContext) { var c = cv.getContext("2d"); c.clearRect(0, 0, cv.width, cv.height); }
-      pieCanvasState = null; // 清空悬停命中状态，避免空画布上重绘旧数据
     }
     // 总渲染入口：月份切换(onchange)时调用，依次刷新各面板
     function renderAll() {
       var ym = curMonth();
       // 空数据校验：选中月份取不到有效数据则不渲染任何内容
       if (!ym || !monthHasData(ym)) { showEmptyState(); return; }
-      renderKPIs(); renderCats(); renderCompare(); renderPieAndFail(); renderIssues(); initAutoScroll();
+      renderKPIs(); renderCats(); renderCompare(); renderIssues(); initAutoScroll();
     }
     // 自动循环滚动：对指定容器初始化跑马灯效果（内容超出时出现滚动条并自动滚动，到底循环回顶部）
     function initAutoScroll() {
@@ -833,62 +812,6 @@ body>*{position:relative;z-index:1}
       });
       tb.innerHTML = '<thead><tr><th>指标</th><th>维度</th><th>本月均值</th><th>目标</th><th>状态</th></tr></thead><tbody>' + (rows.join("") || '<tr><td colspan="5" style="text-align:center;color:#aaa">本月无数据</td></tr>') + '</tbody>';
     }
-    // 渲染右侧"五维达标率"雷达图；问题清单由 renderIssues 单独渲染
-    var pieCanvasState = null;
-    function renderPieAndFail() {
-      var ym = curMonth(); var mr = DATA.daily.filter(function(r){return(r.year+"-"+pad2(r.month))===ym});
-      var p = ym.split("-"), Y = +p[0], M = +p[1], dimDays = new Date(Y, M, 0).getDate();
-      // ② Canvas 初始化：按容器尺寸 × devicePixelRatio 建立高清画布并清空（dpr 缩放，避免模糊）
-      var cv=document.getElementById("dimChart"),wrap=cv.parentElement;var w=wrap.clientWidth||240,h=wrap.clientHeight||160;var dpr=window.devicePixelRatio||1;
-      cv.width=Math.round(w*dpr);cv.height=Math.round(h*dpr);cv.style.width=w+"px";cv.style.height=h+"px";var ctx=cv.getContext("2d");ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,w,h);
-      // ③ 五维达标率：逐类别逐日判定“当天类别内带目标的指标是否全达标”，统计 good/total 算百分比
-      var dims=[{l:"S",cn:"安全",c:"#6366f1",cat:"Safety"},{l:"Q",cn:"质量",c:"#34d399",cat:"Quality"},{l:"D",cn:"交付",c:"#38bdf8",cat:"Delivery"},{l:"C",cn:"成本",c:"#f59e0b",cat:"Cost"},{l:"P",cn:"人员",c:"#ec4899",cat:"People"}];
-      dims.forEach(function(dd){var ms=DATA.metrics.filter(function(m){return m.category===dd.cat});var g=0,tot=0;
-        for(var d=1;d<=dimDays;d++){var ds=Y+"-"+pad2(M)+"-"+pad2(d);var dr=mr.filter(function(x){return x.date===ds});if(!dr.length)continue;var allG=true,hasT=false;
-          ms.forEach(function(m){if(m.target===null)return;hasT=true;var d2=mainDim(m.code);var found=dr.find(function(x){return x.code===m.code&&x.dim===d2});if(found&&statusOf(m,found.value)!=="g")allG=false});
-          if(hasT){tot++;if(allG)g++}}dd.pct=tot?Math.round(g/tot*100):0;dd.good=g;dd.total=tot});
-      // ④ 雷达图整体参数：圆心/半径/维数；BAD=70% 为低达标率阈值（红点警示）
-      var cx=w/2,cy=h/2,rd=Math.min(cx-62,cy-46,74),nd=dims.length,BAD=70;
-      // soft base glow behind radar — gives a "floating on water" depth on the light panel
-      var baseG=ctx.createRadialGradient(cx,cy,0,cx,cy,rd*1.28);
-      baseG.addColorStop(0,"rgba(56,189,248,.12)");
-      baseG.addColorStop(.55,"rgba(139,92,246,.07)");
-      baseG.addColorStop(1,"rgba(139,92,246,0)");
-      ctx.fillStyle=baseG;ctx.beginPath();ctx.arc(cx,cy,rd*1.28,0,2*Math.PI);ctx.fill();
-      // ⑤ 同心网格（0.25/0.5/0.75/1 四圈）+ 五条放射轴，浅灰描边，承载雷达读数
-      [0.25,0.5,0.75,1].forEach(function(r){
-        ctx.beginPath();for(var i=0;i<=nd;i++){var a=-Math.PI/2+(i%nd)*2*Math.PI/nd;var x=cx+rd*r*Math.cos(a);var y=cy+rd*r*Math.sin(a);i===0?ctx.moveTo(x,y):ctx.lineTo(x,y)}
-        ctx.closePath();ctx.strokeStyle="rgba(100,116,139,.24)";ctx.lineWidth=0.8;ctx.stroke()});
-      for(var i=0;i<nd;i++){var a=-Math.PI/2+i*2*Math.PI/nd;ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(cx+rd*Math.cos(a),cy+rd*Math.sin(a));ctx.strokeStyle="rgba(100,116,139,.15)";ctx.lineWidth=0.8;ctx.stroke()}
-      // ⑥ 数据多边形：把各维达标率投影到对应放射轴，描边+淡填充+发光，整体外凸
-      ctx.beginPath();dims.forEach(function(dd,i){var a=-Math.PI/2+i*2*Math.PI/nd;var r2=rd*(dd.pct/100);var x=cx+r2*Math.cos(a);var y=cy+r2*Math.sin(a);i===0?ctx.moveTo(x,y):ctx.lineTo(x,y)});
-      ctx.closePath();
-      ctx.fillStyle="rgba(99,102,241,.07)";ctx.fill();
-      ctx.strokeStyle="rgba(79,70,229,.9)";ctx.lineWidth=2.8;ctx.lineJoin="round";ctx.shadowColor="rgba(99,102,241,.45)";ctx.shadowBlur=12;ctx.stroke();ctx.shadowBlur=0;
-      // vertices + leader lines + external labels (text kept outside the pentagon)
-      dims.forEach(function(dd,i){var a=-Math.PI/2+i*2*Math.PI/nd;var r2=rd*(dd.pct/100);
-        var vx=cx+r2*Math.cos(a),vy=cy+r2*Math.sin(a);
-        var gx=cx+rd*Math.cos(a),gy=cy+rd*Math.sin(a);
-        var lx=cx+(rd+20)*Math.cos(a),ly=cy+(rd+20)*Math.sin(a);
-        var bad=dd.pct<BAD;
-        // ⑦ 引导线：浅灰虚线，把每个顶点连到画布外侧文字标签
-        ctx.beginPath();ctx.moveTo(gx,gy);ctx.lineTo(lx,ly);ctx.strokeStyle="rgba(148,163,184,.45)";ctx.lineWidth=1;ctx.setLineDash([3,3]);ctx.stroke();ctx.setLineDash([]);
-        // ⑧ 顶点节点：带光晕的彩色圆点（正常用维度色，低达标率<BAD 则用红色警示+外圈环+中心白点）
-        ctx.beginPath();ctx.arc(vx,vy,bad?6:5.5,0,2*Math.PI);ctx.fillStyle=bad?"#ef4444":dd.c;ctx.shadowColor=bad?"#ef4444":dd.c;ctx.shadowBlur=bad?22:14;ctx.fill();ctx.shadowBlur=0;
-        ctx.beginPath();ctx.arc(vx,vy,bad?6:5.5,0,2*Math.PI);ctx.strokeStyle=bad?"rgba(239,68,68,.35)":dd.c+"55";ctx.lineWidth=4;ctx.stroke();
-        ctx.beginPath();ctx.arc(vx,vy,2.4,0,2*Math.PI);ctx.fillStyle="#fff";ctx.fill();
-        if(bad){ctx.beginPath();ctx.arc(vx,vy,11,0,2*Math.PI);ctx.strokeStyle="rgba(239,68,68,.85)";ctx.lineWidth=1.5;ctx.stroke()}
-        // ⑨ 外标签：维度字母+达标率在上、中文名在下；按顶点方位自动选左/右/居中对齐
-        var align=Math.abs(Math.cos(a))<0.3?"center":(Math.cos(a)>0?"left":"right");
-        var tx=align==="center"?lx:(align==="left"?lx+4:lx-4);
-        ctx.textAlign=align;ctx.textBaseline="middle";
-        ctx.fillStyle=bad?"#f87171":dd.c;ctx.font="bold 12px sans-serif";ctx.fillText(dd.l+" "+dd.pct+"%",tx,ly);
-        ctx.fillStyle=bad?"rgba(248,113,113,.9)":"rgba(226,232,240,.82)";ctx.font="10px sans-serif";ctx.fillText(dd.cn,tx,ly+14);
-      });
-      ctx.fillStyle="rgba(255,255,255,.1)";ctx.font="8px sans-serif";ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText("SQDCP",cx,cy);
-      // ⑩ 图例：legend 当前由 .chart-legend{display:none} 隐藏，HTML 仍生成以便日后复用
-      var lhtml="";dims.forEach(function(dd){lhtml+='<div class="lg-row"><span class="dot" style="background:'+dd.c+'"></span><span style="color:#94a3b8">'+dd.l+'</span><span class="lg-pct">'+dd.pct+'%</span></div>'});document.getElementById("chartLegend").innerHTML=lhtml;
-    }
     // 渲染左侧"问题跟踪清单"：按问题日期所在月过滤，未关闭置顶、已关闭折叠计数
     function renderIssues() {
       var ym = curMonth();
@@ -897,7 +820,7 @@ body>*{position:relative;z-index:1}
         return (r.year + "-" + pad2(r.month)) === ym;
       });
       if (!issues.length) {
-        tb.innerHTML = '<tbody><tr><td colspan="6" class="empty">本月暂无问题</td></tr></tbody>';
+        tb.innerHTML = '<tbody><tr><td colspan="7" class="empty">本月暂无问题</td></tr></tbody>';
         return;
       }
       var order = { "未开始": 0, "进行中": 1, "已关闭": 2 };
@@ -914,16 +837,17 @@ body>*{position:relative;z-index:1}
         var stCls = r.status === "进行中" ? "st-doing" : "st-open";
         var stTxt = r.status || "未开始";
         var owner = r.owner ? esc(r.owner) : "—";
+        var action = r.action ? esc(r.action) : "—";
         var miss = r.known ? "" : '<div class="miss">指标编号 ' + esc(r.code || "未填写") + " 未配置</div>";
         var now = new Date();
         var today = now.getFullYear() + "-" + pad2(now.getMonth() + 1) + "-" + pad2(now.getDate());
         var overdue = r.plannedClose && r.status !== "已关闭" && r.plannedClose < today;
         var pl = r.plannedClose ? fmtDate(r.plannedClose) : "—";
         var due = overdue ? '<span class="due">超期</span>' : "";
-        rows += '<tr class="'+rowCls+'"><td>'+esc(r.desc)+'</td><td><span class="st '+stCls+'">'+stTxt+'</span></td><td>'+owner+'</td><td>'+pl+due+'</td><td>'+fmtDate(r.date)+'</td><td>'+esc(r.name)+miss+'</td></tr>';
+        rows += '<tr class="'+rowCls+'"><td>'+esc(r.desc)+'</td><td>'+action+'</td><td><span class="st '+stCls+'">'+stTxt+'</span></td><td>'+owner+'</td><td>'+pl+due+'</td><td>'+fmtDate(r.date)+'</td><td>'+esc(r.name)+miss+'</td></tr>';
       });
-      var foot = closed ? '<tfoot><tr><td colspan="6" class="issue-closed">已关闭 ' + closed + " 条</td></tr></tfoot>" : "";
-      tb.innerHTML = '<thead><tr><th>问题描述</th><th>状态</th><th>负责人</th><th>计划关闭</th><th>日期</th><th>指标</th></tr></thead><tbody>' + rows + '</tbody>' + foot;
+      var foot = closed ? '<tfoot><tr><td colspan="7" class="issue-closed">已关闭 ' + closed + " 条</td></tr></tfoot>" : "";
+      tb.innerHTML = '<thead><tr><th>问题描述</th><th>行动</th><th>状态</th><th>负责人</th><th>计划关闭</th><th>日期</th><th>指标</th></tr></thead><tbody>' + rows + '</tbody>' + foot;
     }
     // 入口：页面加载即初始化并首屏渲染
     init();
